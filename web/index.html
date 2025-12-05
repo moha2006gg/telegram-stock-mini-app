@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Stock Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+      :root{ --accent:#D94F2B; --muted:#444; }
+      body{ font-family: Inter, "Noto Sans SC", sans-serif; background:linear-gradient(180deg,#fffaf6,#fff); margin:0; color:var(--muted); }
+      .container{ max-width:1100px; margin:28px auto; padding:16px; }
+      header{ display:flex; justify-content:space-between; align-items:center; gap:12px; }
+      .brand{ font-weight:700; color:var(--accent); font-size:20px; letter-spacing:1px; }
+      .card{ background:#fff; box-shadow:0 6px 18px rgba(0,0,0,0.06); border-radius:12px; padding:16px; margin-top:14px; }
+      .row{ display:flex; gap:12px; align-items:center; }
+      button.primary{ background:var(--accent); color:white; padding:8px 12px; border-radius:10px; border:none; cursor:pointer; }
+      .rtl { direction:rtl; text-align:right; }
+      .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+      .item{ border-left:4px solid var(--accent); padding:10px; border-radius:8px; background:linear-gradient(90deg,#fff, #fffaf6); }
+      .small{ font-size:13px; color:#666; }
+      nav a{ margin-right:8px; text-decoration:none; color:var(--muted); }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
