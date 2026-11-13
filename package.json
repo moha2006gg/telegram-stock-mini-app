@@ -1,9 +1,8 @@
 {
   "name": "telegram-uv-printing-bot",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "dependencies": {
-    "googleapis": "^144.0.0",
     "telegraf": "^4.16.3"
   }
 }
