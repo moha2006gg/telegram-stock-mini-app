@@ -8,6 +8,7 @@
     "web:preview": "cd web && npm run preview"
   },
   "dependencies": {
+    "googleapis": "^144.0.0",
     "mongodb": "^7.0.0",
     "telegraf": "^4.16.3"
   }
