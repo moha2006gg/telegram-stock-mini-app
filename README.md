@@ -1,26 +1,41 @@
-# Telegram Stock Management — Starter Repo
-A starter project for a Telegram-based stock management system with a chic Chinese-like UI (English/Arabic/Chinese) and scanning features (2D barcode/QR scanning and 3D model preview). Designed to be deployed to **Vercel** (serverless API) and includes a React web UI.
+# Telegram UV Printing Bot
 
-## What's included
-- `api/bot.js` — Vercel serverless function that handles Telegram webhook using Telegraf (webhook mode).
-- `api/db.js` — MongoDB connection helper.
-- `web/` — React (Vite) frontend with inventory UI, multi-warehouse support, language toggle (EN/AR/CN), QR/barcode scanning page (uses `html5-qrcode`) and 3D preview using `<model-viewer>`.
-- `README.md` — this file with instructions.
+Telegram bot that manages a Google Sheet for a UV printing business. Deployed on Vercel.
 
-## Quick setup
-1. Create a Telegram bot via BotFather → get `TELEGRAM_BOT_TOKEN`.
-2. Create a MongoDB Atlas cluster → get `MONGO_URI`.
-3. Deploy to Vercel:
-   - Add environment variables: `TELEGRAM_BOT_TOKEN`, `MONGO_URI`, `BASE_URL` (your Vercel domain)
-   - Push this repo to GitHub and import on Vercel OR use `vercel` CLI.
-4. Set the Telegram webhook:
-```
-https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=<YOUR_BASE_URL>/api/bot
-```
+## Features
 
-## Notes & next steps
-- This is a starter. Security (auth & role checks), validations, and production hardening are left for you to extend.
-- 3D scanning: we provide a *3D model-preview* flow (if product metadata contains `modelUrl`, the frontend shows it using `<model-viewer>`). Full AR scanning requires extra libraries and mobile device support.
-- For multi-warehouse: create warehouses in DB and assign items to warehouses.
+- **Devis** — Add UV print quotes with auto-calculated prices (by type and surface area)
+- **P&L** — Track profits and losses, view balance
+- **Payment messages** — Generate payment confirmations to forward to clients
+- **Adjust** — Record adjusted payments when they differ from the quote
 
-Enjoy! If you want, I can extend this to a full GitHub repo with CI, role-based access, and extra features.
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `/solde` | Net balance (profits - losses) |
+| `/devis <client> <w_cm> <h_cm> <qty> <type>` | Add quote (types: w, wv, wcv, eco, ecod) |
+| `/profit <client> <montant>` | Add standalone profit |
+| `/perte <desc> <montant>` | Add loss (ink, materials, etc.) |
+| `/ajuster <client> <montant>` | Adjust a client's payment |
+| `/envoyer <client> <montant> <ref>` | Generate payment message |
+| `/pl` | Full P&L breakdown |
+| `/liste` | Recent quotes |
+| `/tarifs` | Print rate card |
+
+## Setup
+
+1. **Telegram bot** — Create via [@BotFather](https://t.me/BotFather), copy the token.
+
+2. **Google service account** — In [Google Cloud Console](https://console.cloud.google.com):
+   - Enable **Google Sheets API**
+   - Create a service account, download the JSON key
+   - Share the spreadsheet with the service account email (Editor access)
+   - Base64-encode the JSON: `base64 -i key.json`
+
+3. **Deploy to Vercel** — Add env vars: `TELEGRAM_BOT_TOKEN`, `GOOGLE_CREDENTIALS_BASE64`, `SPREADSHEET_ID`, `OWNER_TELEGRAM_ID`.
+
+4. **Set webhook**:
+   ```
+   https://api.telegram.org/bot<TOKEN>/setWebhook?url=<VERCEL_URL>/api/bot
+   ```

@@ -1,15 +1,9 @@
 {
-  "name": "telegram-stock-vercel-starter",
-  "version": "0.1.0",
+  "name": "telegram-uv-printing-bot",
+  "version": "1.0.0",
   "private": true,
-  "scripts": {
-    "web:dev": "cd web && npm install && npm run dev",
-    "web:build": "cd web && npm run build",
-    "web:preview": "cd web && npm run preview"
-  },
   "dependencies": {
     "googleapis": "^144.0.0",
-    "mongodb": "^7.0.0",
     "telegraf": "^4.16.3"
   }
 }

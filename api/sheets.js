@@ -1,15 +1,29 @@
 const { google } = require('googleapis');
 
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
-const TX_SHEET = process.env.TRANSACTIONS_SHEET || 'Transactions';
-const PL_SHEET = process.env.PL_SHEET || 'P&L';
-const CURRENCY = process.env.CURRENCY || '$';
+const DEVIS_SHEET = 'Devis UV';
+const PL_SHEET = 'Profits & Pertes';
+
+const TARIFFS = {
+  'W':                    3000,
+  'W-V':                  6000,
+  'W-C-V':                9000,
+  'ecosolvent simple':    2000,
+  'ecosolvent + decoupe': 3000,
+};
+
+const TYPE_ALIASES = {
+  'w':    'W',
+  'wv':   'W-V',
+  'wcv':  'W-C-V',
+  'eco':  'ecosolvent simple',
+  'ecod': 'ecosolvent + decoupe',
+};
 
 let authClient = null;
 
 function getAuth() {
   if (authClient) return authClient;
-
   let credentials;
   if (process.env.GOOGLE_CREDENTIALS_BASE64) {
     credentials = JSON.parse(
@@ -21,13 +35,8 @@ function getAuth() {
       private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
     };
   } else {
-    throw new Error(
-      'Google credentials not configured.\n' +
-      'Set GOOGLE_CREDENTIALS_BASE64 (base64 of service account JSON)\n' +
-      'or GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_PRIVATE_KEY.'
-    );
+    throw new Error('Google credentials not configured.');
   }
-
   authClient = new google.auth.GoogleAuth({
     credentials,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
@@ -39,164 +48,229 @@ function api() {
   return google.sheets({ version: 'v4', auth: getAuth() });
 }
 
-async function ensureSheets() {
-  if (!SPREADSHEET_ID) throw new Error('SPREADSHEET_ID not set.');
-
-  const s = api();
-  const { data } = await s.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  const names = data.sheets.map(sh => sh.properties.title);
-  const requests = [];
-
-  if (!names.includes(TX_SHEET)) {
-    requests.push({ addSheet: { properties: { title: TX_SHEET } } });
+function resolvePrintType(input) {
+  const lower = input.toLowerCase().trim();
+  if (TYPE_ALIASES[lower]) return TYPE_ALIASES[lower];
+  for (const key of Object.keys(TARIFFS)) {
+    if (key.toLowerCase() === lower) return key;
   }
-  if (!names.includes(PL_SHEET)) {
-    requests.push({ addSheet: { properties: { title: PL_SHEET } } });
-  }
-
-  if (requests.length) {
-    await s.spreadsheets.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
-      resource: { requests },
-    });
-  }
-
-  await ensureHeaders(s, TX_SHEET, ['Date', 'Type', 'Amount', 'Description', 'Client', 'Category']);
-  await ensureHeaders(s, PL_SHEET, ['Date', 'Description', 'Revenue', 'Cost', 'Profit', 'Category']);
+  return null;
 }
 
-async function ensureHeaders(s, sheet, headers) {
+function fmtDA(n) {
+  return Number(n).toLocaleString('fr-DZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' DA';
+}
+
+// Find next empty row in a column range (1-indexed)
+async function nextRow(sheet, col) {
+  const s = api();
   const { data } = await s.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: `'${sheet}'!A1:${String.fromCharCode(64 + headers.length)}1`,
+    range: `'${sheet}'!${col}1:${col}`,
   });
-  if (!data.values || !data.values.length) {
-    await s.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `'${sheet}'!A1`,
-      valueInputOption: 'RAW',
-      resource: { values: [headers] },
-    });
-  }
+  return (data.values || []).length + 1;
 }
 
-async function addTransaction(type, amount, description, client, category) {
-  const s = api();
-  const date = new Date().toLocaleDateString('en-CA');
+// ─── Devis UV ────────────────────────────────────────────
 
-  await s.spreadsheets.values.append({
+async function addQuote(client, widthCm, heightCm, qty, printType, isComplete, materialCost) {
+  const s = api();
+  const tariff = TARIFFS[printType];
+  const surface = (widthCm * heightCm) / 10000;
+  const articlePrice = isComplete
+    ? materialCost + surface * tariff
+    : surface * tariff;
+  const total = articlePrice * qty;
+
+  const row = await nextRow(DEVIS_SHEET, 'A');
+
+  const values = [
+    client,
+    widthCm,
+    heightCm,
+    qty,
+    printType,
+    isComplete ? 'Oui' : 'Non',
+    isComplete ? materialCost : '',
+    surface,
+    tariff,
+    Math.round(articlePrice * 100) / 100,
+    Math.round(total * 100) / 100,
+  ];
+
+  await s.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
-    range: `'${TX_SHEET}'!A:F`,
+    range: `'${DEVIS_SHEET}'!A${row}:K${row}`,
+    valueInputOption: 'USER_ENTERED',
+    resource: { values: [values] },
+  });
+
+  // Add corresponding P&L profit row
+  const plRow = await nextRow(PL_SHEET, 'A');
+  await s.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `'${PL_SHEET}'!A${plRow}:D${plRow}`,
     valueInputOption: 'USER_ENTERED',
     resource: {
-      values: [[date, type, amount, description, client || '', category || '']],
+      values: [[
+        client,
+        `='${DEVIS_SHEET}'!K${row}`,
+        '',
+        `=IF(C${plRow}="",B${plRow},C${plRow})`,
+      ]],
     },
   });
 
-  const balance = await getBalance();
-  return { date, type, amount, description, client, category, balance };
+  return { client, widthCm, heightCm, qty, printType, surface, tariff, articlePrice, total, devisRow: row };
+}
+
+async function getQuotes(limit) {
+  const s = api();
+  const { data } = await s.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `'${DEVIS_SHEET}'!A4:K`,
+  });
+  const rows = (data.values || [])
+    .filter(r => r[0] && r[0].trim())
+    .map(r => ({
+      client: r[0] || '',
+      width: r[1] || '',
+      height: r[2] || '',
+      qty: r[3] || '',
+      type: r[4] || '',
+      total: r[10] || '',
+    }));
+  return rows.slice(-(limit || 10)).reverse();
+}
+
+// ─── Profits & Pertes ────────────────────────────────────
+
+async function addProfit(client, amount) {
+  const s = api();
+  const row = await nextRow(PL_SHEET, 'A');
+  await s.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `'${PL_SHEET}'!A${row}:D${row}`,
+    valueInputOption: 'USER_ENTERED',
+    resource: {
+      values: [[client, amount, '', amount]],
+    },
+  });
+  return { client, amount, row };
+}
+
+async function addLoss(description, amount) {
+  const s = api();
+  // Losses go in columns F-G. Find next empty row in column G.
+  const { data } = await s.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `'${PL_SHEET}'!G5:G`,
+  });
+  const vals = data.values || [];
+  // Find first empty slot
+  let offset = vals.length;
+  for (let i = 0; i < vals.length; i++) {
+    if (!vals[i] || !vals[i][0] || !vals[i][0].trim()) {
+      offset = i;
+      break;
+    }
+  }
+  const row = 5 + offset;
+
+  await s.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `'${PL_SHEET}'!F${row}:G${row}`,
+    valueInputOption: 'USER_ENTERED',
+    resource: { values: [[description, amount]] },
+  });
+  return { description, amount, row };
+}
+
+async function adjustPayment(clientSearch, amount) {
+  const s = api();
+  const { data } = await s.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `'${PL_SHEET}'!A5:D`,
+  });
+  const rows = data.values || [];
+  const search = clientSearch.toLowerCase().trim();
+  // Find last matching row (most recent)
+  let matchIdx = -1;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if ((rows[i][0] || '').toLowerCase().trim().includes(search)) {
+      matchIdx = i;
+      break;
+    }
+  }
+  if (matchIdx === -1) return null;
+
+  const sheetRow = 5 + matchIdx;
+  await s.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `'${PL_SHEET}'!C${sheetRow}:D${sheetRow}`,
+    valueInputOption: 'USER_ENTERED',
+    resource: { values: [[amount, amount]] },
+  });
+
+  return { client: rows[matchIdx][0], originalAmount: rows[matchIdx][1], adjusted: amount, row: sheetRow };
 }
 
 async function getBalance() {
   const s = api();
-  const { data } = await s.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `'${TX_SHEET}'!B2:C`,
-  });
+  // Read profits (column D) and losses (column G)
+  const [profitRes, lossRes] = await Promise.all([
+    s.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `'${PL_SHEET}'!D5:D`,
+    }),
+    s.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `'${PL_SHEET}'!G5:G`,
+    }),
+  ]);
 
-  let balance = 0;
-  for (const row of data.values || []) {
-    const type = (row[0] || '').toUpperCase();
-    const amt = parseFloat(row[1]) || 0;
-    if (type === 'IN') balance += amt;
-    else if (type === 'OUT') balance -= amt;
-  }
-  return Math.round(balance * 100) / 100;
+  const parseNum = (v) => parseFloat((v || '').toString().replace(/\s/g, '').replace(',', '.')) || 0;
+
+  const profits = (profitRes.data.values || []).reduce((sum, r) => sum + parseNum(r[0]), 0);
+  const losses = (lossRes.data.values || []).reduce((sum, r) => sum + parseNum(r[0]), 0);
+
+  return { profits: Math.round(profits * 100) / 100, losses: Math.round(losses * 100) / 100, net: Math.round((profits - losses) * 100) / 100 };
 }
 
-async function getTransactions(limit) {
+async function getPLDetails() {
   const s = api();
-  const { data } = await s.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `'${TX_SHEET}'!A2:F`,
-  });
+  const [profitRes, lossRes] = await Promise.all([
+    s.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `'${PL_SHEET}'!A5:D`,
+    }),
+    s.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `'${PL_SHEET}'!F5:G`,
+    }),
+  ]);
 
-  const rows = (data.values || []).map(r => ({
-    date: r[0] || '',
-    type: r[1] || '',
-    amount: parseFloat(r[2]) || 0,
-    description: r[3] || '',
-    client: r[4] || '',
-    category: r[5] || '',
-  }));
+  const profitRows = (profitRes.data.values || [])
+    .filter(r => r[0] && r[0].trim())
+    .map(r => ({ client: r[0], devis: r[1] || '', adjusted: r[2] || '', profit: r[3] || '' }));
 
-  return rows.slice(-(limit || 10)).reverse();
-}
+  const lossRows = (lossRes.data.values || [])
+    .filter(r => r[0] && r[0].trim() || r[1] && r[1].toString().trim())
+    .map(r => ({ description: r[0] || '', amount: r[1] || '' }));
 
-async function addPLEntry(description, revenue, cost, category) {
-  const s = api();
-  const date = new Date().toLocaleDateString('en-CA');
-  const profit = revenue - cost;
-
-  await s.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `'${PL_SHEET}'!A:F`,
-    valueInputOption: 'USER_ENTERED',
-    resource: {
-      values: [[date, description, revenue, cost, profit, category || '']],
-    },
-  });
-
-  return { date, description, revenue, cost, profit, category };
-}
-
-async function getPLSummary(month) {
-  const s = api();
-  const { data } = await s.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `'${PL_SHEET}'!A2:F`,
-  });
-
-  let rows = (data.values || []).map(r => ({
-    date: r[0] || '',
-    description: r[1] || '',
-    revenue: parseFloat(r[2]) || 0,
-    cost: parseFloat(r[3]) || 0,
-    profit: parseFloat(r[4]) || 0,
-    category: r[5] || '',
-  }));
-
-  if (month) {
-    rows = rows.filter(r => r.date.startsWith(month));
-  }
-
-  const totalRevenue = rows.reduce((s, r) => s + r.revenue, 0);
-  const totalCost = rows.reduce((s, r) => s + r.cost, 0);
-
-  return {
-    rows,
-    totalRevenue,
-    totalCost,
-    totalProfit: totalRevenue - totalCost,
-    count: rows.length,
-  };
-}
-
-function fmt(amount) {
-  const num = Math.abs(amount).toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return `${CURRENCY}${num}`;
+  return { profitRows, lossRows };
 }
 
 module.exports = {
-  ensureSheets,
-  addTransaction,
+  resolvePrintType,
+  fmtDA,
+  addQuote,
+  getQuotes,
+  addProfit,
+  addLoss,
+  adjustPayment,
   getBalance,
-  getTransactions,
-  addPLEntry,
-  getPLSummary,
-  fmt,
-  CURRENCY,
+  getPLDetails,
+  TARIFFS,
+  TYPE_ALIASES,
 };
