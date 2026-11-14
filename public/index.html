@@ -190,6 +190,14 @@
   .stats3 .tile { text-align: center; padding: 10px 6px; }
   .stats3 .v { font-size: 13.5px; }
 
+  .due { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; background: var(--red-soft); color: var(--red); border-radius: 14px; padding: 10px 14px; font-weight: 700; font-size: 14px; }
+  .due.clear { background: var(--green-soft); color: var(--green); }
+  .due b { font-size: 17px; font-weight: 800; }
+  .checks { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .check { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-bottom: 1px solid var(--line); font-weight: 600; }
+  .check:last-child { border-bottom: 0; }
+  .check input { width: 20px; height: 20px; accent-color: var(--green); flex: none; margin: 0; }
+  .check span:first-of-type { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   pre.preview { margin: 0; white-space: pre-wrap; word-break: break-word; font: 600 13.5px/1.5 ui-monospace, Menlo, monospace; }
 
   /* ── nav ── */
@@ -211,9 +219,9 @@
   .sheet {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 41; background: var(--bg-bottom);
     border-radius: 28px 28px 0 0; padding: 10px 16px calc(20px + env(safe-area-inset-bottom));
-    transform: translateY(105%); transition: transform .25s ease;
+    transform: translateY(105%); visibility: hidden; transition: transform .25s ease, visibility 0s .25s;
   }
-  .sheet.open { transform: none; }
+  .sheet.open { transform: none; visibility: visible; transition: transform .25s ease; }
   .sheet .grab { width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 14px; }
   .sheet .opt { display: flex; align-items: center; gap: 14px; width: 100%; border: 0; background: var(--card); border-radius: 18px; padding: 14px; margin-bottom: 8px; text-align: left; font-weight: 700; box-shadow: var(--shadow); }
   .sheet .opt .ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--lime); color: var(--lime-ink); }
@@ -295,6 +303,7 @@
     <div class="tile dark"><div class="k">Crédit</div><div class="v num" id="c-credit"></div></div>
   </div>
   <button class="cta" id="c-payall">Tout marquer payé</button>
+  <button class="cta ghost" id="c-remind">Envoyer un relevé</button>
   <div class="sec"><h2>Commandes</h2><span class="link">Touchez le statut pour changer</span></div>
   <div class="list" id="c-orders"></div>
 </section>
@@ -354,13 +363,27 @@
 <!-- ═══ Message client ═══ -->
 <section class="page" id="p-msg">
   <div class="title-bar"><button class="round" data-back aria-label="Retour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><h1>Message client</h1><span class="spacer"></span></div>
-  <form class="card" id="f-msg" autocomplete="off">
-    <label class="f" for="m-client">Destinataire</label>
-    <div class="field"><input class="input" id="m-client" required><div class="suggest"></div></div>
-    <label class="f" for="m-amount">Montant (DA)</label>
-    <input class="input num" id="m-amount" inputmode="decimal" required>
-    <label class="f" for="m-ref">Référence</label>
-    <input class="input" id="m-ref" placeholder="ex : Impression UV boîtes" required>
+  <div class="seg" id="m-kind">
+    <button data-k="detail" class="on">Détaillé</button>
+    <button data-k="simple">Simple</button>
+    <button data-k="confirm">Confirmation</button>
+  </div>
+  <form class="card" id="f-msg" autocomplete="off" style="margin-top:14px">
+    <label class="f" for="m-client">Client</label>
+    <div class="field"><input class="input" id="m-client" placeholder="Rechercher un client" required><div class="suggest"></div></div>
+    <div class="due" id="m-due" hidden></div>
+    <div id="m-orders-wrap" hidden>
+      <label class="f">Commandes à inclure</label>
+      <div class="checks" id="m-orders"></div>
+    </div>
+    <div id="m-amount-wrap">
+      <label class="f" for="m-amount">Montant (DA)</label>
+      <input class="input num" id="m-amount" inputmode="decimal">
+    </div>
+    <div id="m-ref-wrap">
+      <label class="f" for="m-ref">Référence</label>
+      <input class="input" id="m-ref" placeholder="ex : Impression UV boîtes">
+    </div>
   </form>
   <div class="sec"><h2>Aperçu</h2></div>
   <div class="card"><pre class="preview" id="m-preview"></pre></div>
@@ -383,7 +406,7 @@
   <button class="opt" data-entry="profit"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span><span>Encaisser un profit<small>Vente hors devis, paiement reçu</small></span></button>
   <button class="opt" data-entry="perte"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg></span><span>Ajouter une perte<small>Encre, vernis, matériau…</small></span></button>
   <button class="opt" data-entry="ajuster"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span><span>Ajuster un paiement<small>Montant reçu différent du devis</small></span></button>
-  <button class="opt" data-go="msg"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10 14M21 3l-7 18-4-7-7-4z"/></svg></span><span>Message de paiement<small>Confirmation à transférer</small></span></button>
+  <button class="opt" data-go="msg"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10 14M21 3l-7 18-4-7-7-4z"/></svg></span><span>Message client<small>Relevé des impayés ou confirmation</small></span></button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -580,7 +603,8 @@
     const recent = [...data.orders].reverse().slice(0, 6);
     fill($('home-list'), recent.map((o) => orderRow(o, { onTap: openClient(clientKey(o.client)) })), 'Aucune commande');
     renderTypes();
-    renderPreview();
+    msgClientKey = null;
+    renderMsgForm();
     const page = stack[stack.length - 1];
     if (page === 'activity') renderActivity();
     if (page === 'clients') renderClients();
@@ -643,6 +667,7 @@
     $('c-paid').textContent = money(c.total - c.credit);
     $('c-credit').textContent = money(c.credit);
     $('c-payall').hidden = !unpaid.length;
+    $('c-remind').hidden = !unpaid.length;
     $('c-payall').textContent = `Tout marquer payé · ${da(c.credit)}`;
     fill($('c-orders'), [...c.orders].reverse().map((o) => orderRow(o, { togglable: true })));
   }
@@ -805,43 +830,129 @@
     });
   });
 
-  // ─── message ─────────────────────────────────────────
-  function paymentMessage() {
-    const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  // ─── message client ──────────────────────────────────
+  let msgKind = 'detail';
+  let msgClientKey = null;
+  let msgSelected = new Set();
+  const cap = (s) => (s && /^\p{L}+$/u.test(s) ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+  const daMsg = (n) => (Number.isInteger(n) ? nf.format(n) : n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) + ' DA';
+  // "sami / cadre" → "cadre", "sami cadre pizza" → "cadre pizza", "sami" → "Commande"
+  function orderLabel(o) {
+    const label = o.client.trim();
+    if (label.includes('/')) return label.slice(label.indexOf('/') + 1).trim() || 'Commande';
+    const words = label.split(/\s+/);
+    const rest = words.slice(/^profit$/i.test(words[0]) && words[1] ? 2 : 1).join(' ');
+    return rest || 'Commande';
+  }
+  const msgClient = () => clients.find((c) => c.key === clientKey($('m-client').value)) || null;
+  const msgOrders = () => {
+    const c = msgClient();
+    return c ? c.orders.filter(isUnpaid) : [];
+  };
+  const selectedTotal = () => msgOrders().filter((o) => msgSelected.has(o.row)).reduce((s, o) => s + orderAmount(o), 0);
+  const amountText = (n) => (n > 0 ? String(Math.round(n * 100) / 100).replace('.', ',') : '');
+
+  function setMsgKind(k) {
+    msgKind = k;
+    $$('#m-kind button').forEach((b) => b.classList.toggle('on', b.dataset.k === k));
+    if (k === 'simple' && !$('m-amount').value) $('m-amount').value = amountText(selectedTotal());
+    renderMsgForm();
+  }
+  $$('#m-kind button').forEach((b) => b.addEventListener('click', () => { tick(); setMsgKind(b.dataset.k); }));
+
+  function renderMsgForm() {
+    const c = msgClient();
+    const key = c ? c.key : null;
+    if (key !== msgClientKey) {
+      msgClientKey = key;
+      msgSelected = new Set(msgOrders().map((o) => o.row));
+      if (msgKind === 'simple') $('m-amount').value = amountText(selectedTotal());
+    }
+    const orders = msgOrders();
+    const due = $('m-due');
+    due.hidden = !c || msgKind === 'confirm';
+    if (c) {
+      due.className = 'due' + (c.credit > 0 ? '' : ' clear');
+      due.replaceChildren(
+        h('span', '', c.credit > 0 ? `${cap(c.name)} doit · ${orders.length} commande${orders.length > 1 ? 's' : ''}` : `${cap(c.name)} est à jour`),
+        h('b', 'num', da(c.credit))
+      );
+    }
+    $('m-orders-wrap').hidden = msgKind !== 'detail' || !orders.length;
+    $('m-orders').replaceChildren(...orders.map((o) => {
+      const row = h('label', 'check');
+      const box = h('input');
+      box.type = 'checkbox';
+      box.checked = msgSelected.has(o.row);
+      box.addEventListener('change', () => { box.checked ? msgSelected.add(o.row) : msgSelected.delete(o.row); tick(); renderPreview(); });
+      row.append(box, h('span', '', orderLabel(o)), h('span', 'num', da(orderAmount(o))));
+      return row;
+    }));
+    $('m-amount-wrap').hidden = msgKind === 'detail';
+    $('m-ref-wrap').hidden = msgKind !== 'confirm';
+    renderPreview();
+  }
+
+  function buildMessage() {
+    const name = cap(clientWord($('m-client').value.trim())) || '…';
     const line = '━'.repeat(22);
+    if (msgKind === 'detail') {
+      const chosen = msgOrders().filter((o) => msgSelected.has(o.row));
+      const total = chosen.reduce((s, o) => s + orderAmount(o), 0);
+      const items = chosen.length ? chosen.map((o) => `• ${orderLabel(o)} — ${daMsg(orderAmount(o))}`).join('\n') : '• …';
+      return `Bonjour ${name},\n\nVoici le récapitulatif de vos commandes en attente de paiement :\n\n${items}\n\n${line}\nTotal à régler : ${daMsg(total)}\n${line}\n\nMerci de votre confiance.`;
+    }
+    const amount = num($('m-amount').value) || 0;
+    if (msgKind === 'simple') {
+      return `Bonjour ${name},\n\nLe montant restant à régler pour vos commandes est de ${daMsg(amount)}.\n\nMerci de votre confiance.`;
+    }
+    const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
     return `${line}\n  CONFIRMATION DE PAIEMENT\n${line}\n\n` +
       `Destinataire : ${$('m-client').value.trim() || '…'}\n` +
-      `Montant : ${da($('m-amount').value)}\n` +
+      `Montant : ${daMsg(amount)}\n` +
       `Ref : ${$('m-ref').value.trim() || '…'}\n` +
       `Date : ${date}\n\n` +
       `Merci de confirmer la reception.\n${line}`;
   }
-  const renderPreview = () => ($('m-preview').textContent = paymentMessage());
-  ['m-client', 'm-amount', 'm-ref'].forEach((id) => $(id).addEventListener('input', renderPreview));
-  const msgValid = () => {
-    if ($('f-msg').reportValidity() && num($('m-amount').value) > 0) return true;
-    toast('Remplissez destinataire, montant et référence', false);
-    return false;
-  };
+  const renderPreview = () => ($('m-preview').textContent = buildMessage());
+  $('m-client').addEventListener('input', renderMsgForm);
+  ['m-amount', 'm-ref'].forEach((id) => $(id).addEventListener('input', renderPreview));
+
+  function msgValid() {
+    const problem = !$('m-client').value.trim() ? 'Choisissez un client'
+      : msgKind === 'detail' && !msgOrders().some((o) => msgSelected.has(o.row)) ? 'Aucune commande non payée sélectionnée'
+      : msgKind !== 'detail' && !(num($('m-amount').value) > 0) ? 'Entrez un montant'
+      : msgKind === 'confirm' && !$('m-ref').value.trim() ? 'Entrez une référence' : null;
+    if (problem) toast(problem, false);
+    return !problem;
+  }
   $('m-send').addEventListener('click', (e) => {
     if (!msgValid()) return;
     busy(e.currentTarget, async () => {
       try {
-        await api('envoyer', { client: $('m-client').value, amount: $('m-amount').value, reference: $('m-ref').value });
-        toast('Envoyé dans le chat');
-        setTimeout(() => tg && tg.close(), 700);
+        await api('envoyer', { text: buildMessage() });
+        toast('Envoyé dans le chat · transférez-le au client');
+        setTimeout(() => tg && tg.close(), 900);
       } catch (err) { toast(err.message, false); }
     });
   });
   $('m-copy').addEventListener('click', async () => {
     if (!msgValid()) return;
-    const text = paymentMessage();
+    const text = buildMessage();
     try { await navigator.clipboard.writeText(text); }
     catch {
       const ta = document.createElement('textarea');
       ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
     }
     toast('Message copié');
+  });
+  $('c-remind').addEventListener('click', () => {
+    const c = clients.find((x) => x.key === currentClient);
+    if (!c) return;
+    $('m-client').value = c.name;
+    msgClientKey = null;
+    setMsgKind('detail');
+    go('msg');
   });
 
   // ─── start ───────────────────────────────────────────
@@ -853,7 +964,7 @@
   if (first) { $('me-name').textContent = first; $('me-avatar').textContent = first.slice(0, 2); }
   $('refresh').addEventListener('click', () => { tick(); load(); });
   setKind('profit');
-  renderPreview();
+  renderMsgForm();
   load();
 })();
 </script>

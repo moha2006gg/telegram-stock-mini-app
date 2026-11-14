@@ -87,14 +87,13 @@ const actions = {
     return r;
   },
 
+  // Posts the previewed text into the owner's own chat so it can be forwarded to the client.
   async envoyer(b) {
-    const client = str(b.client);
-    const amount = num(b.amount);
-    const reference = str(b.reference);
-    if (!client || !(amount > 0) || !reference) throw bad('Client, montant et reference requis');
-    const message = sheets.paymentMessage(client, amount, reference);
-    await new Telegram(TOKEN).sendMessage(OWNER_ID, message);
-    return { message };
+    const text = str(b.text);
+    if (!text) throw bad('Message vide');
+    if (text.length > 4000) throw bad('Message trop long');
+    await new Telegram(TOKEN).sendMessage(OWNER_ID, text);
+    return { ok: true };
   },
 };
 
