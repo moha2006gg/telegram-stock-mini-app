@@ -41,6 +41,7 @@
     --dark-tile: #060a08;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
   html { background: var(--bg-bottom); }
   body {
     margin: 0; min-height: 100vh; color: var(--ink);
@@ -226,6 +227,10 @@
   .sheet .opt { display: flex; align-items: center; gap: 14px; width: 100%; border: 0; background: var(--card); border-radius: 18px; padding: 14px; margin-bottom: 8px; text-align: left; font-weight: 700; box-shadow: var(--shadow); }
   .sheet .opt .ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--lime); color: var(--lime-ink); }
   .sheet .opt .ic svg { width: 20px; height: 20px; }
+  .ed-title { margin: 0 2px 4px; font-size: 18px; font-weight: 800; }
+  .ed-sub { margin: 0 2px; color: var(--muted); font-size: 13px; font-weight: 600; }
+  .amt.edit { border: 0; background: var(--bg-bottom); border-radius: 12px; padding: 6px 10px; display: flex; align-items: center; gap: 6px; }
+  .amt.edit svg { width: 14px; height: 14px; color: var(--muted); }
   .sheet .opt small { display: block; color: var(--muted); font-weight: 600; font-size: 12.5px; }
 
   .toast {
@@ -305,7 +310,7 @@
   </div>
   <button class="cta" id="c-payall">Tout marquer payé</button>
   <button class="cta ghost" id="c-remind">Envoyer un relevé</button>
-  <div class="sec"><h2>Commandes</h2><span class="link">Touchez le statut pour changer</span></div>
+  <div class="sec"><h2>Commandes</h2><span class="link">Touchez le statut ou le montant</span></div>
   <div class="list" id="c-orders"></div>
 </section>
 
@@ -333,6 +338,9 @@
       <div class="l"><span>Prix par article</span><span class="num" id="c-article">—</span></div>
       <div class="l total"><span>Total</span><span class="num" id="c-sum">—</span></div>
     </div>
+    <label class="f" for="d-price">Prix final convenu (optionnel)</label>
+    <input class="input num" id="d-price" inputmode="decimal" placeholder="Vide = prix calculé">
+    <div class="ed-sub" style="margin-top:6px">Si rempli, ce montant est utilisé pour le crédit et les messages.</div>
     <button class="cta" type="submit">Enregistrer le devis</button>
   </form>
 </section>
@@ -408,6 +416,16 @@
   <button class="opt" data-entry="perte"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg></span><span>Ajouter une perte<small>Encre, vernis, matériau…</small></span></button>
   <button class="opt" data-entry="ajuster"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span><span>Ajuster un paiement<small>Montant reçu différent du devis</small></span></button>
   <button class="opt" data-go="msg"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10 14M21 3l-7 18-4-7-7-4z"/></svg></span><span>Message client<small>Relevé des impayés ou confirmation</small></span></button>
+</div>
+
+<div class="sheet" id="edit-sheet">
+  <div class="grab"></div>
+  <h3 class="ed-title" id="ed-title"></h3>
+  <div class="ed-sub" id="ed-sub"></div>
+  <label class="f" for="ed-amount">Montant convenu (DA)</label>
+  <input class="input num" id="ed-amount" inputmode="decimal">
+  <button class="cta" id="ed-save">Enregistrer</button>
+  <button class="cta ghost" id="ed-reset">Revenir au prix du devis</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -565,8 +583,12 @@
   $$('[data-back]').forEach((b) => b.addEventListener('click', back));
   $$('.nav [data-tab]').forEach((b) => b.addEventListener('click', () => { tick(); go(b.dataset.tab, { reset: true }); }));
 
-  const sheet = $('sheet'), sheetBg = $('sheet-bg');
-  const openSheet = (open) => { sheet.classList.toggle('open', open); sheetBg.classList.toggle('open', open); };
+  const sheetBg = $('sheet-bg');
+  const openSheet = (open, el = $('sheet')) => {
+    if (!open) $$('.sheet.open').forEach((s) => s.classList.remove('open'));
+    else el.classList.add('open');
+    sheetBg.classList.toggle('open', open);
+  };
   $('plus').addEventListener('click', () => { tick(); openSheet(true); });
   sheetBg.addEventListener('click', () => openSheet(false));
 
@@ -589,7 +611,12 @@
     sub.append(status);
     if (o.adjusted) sub.append(h('span', '', 'ajusté · devis ' + money(o.devis)));
     body.append(sub);
-    row.append(avatar(o.client), body, h('div', 'amt num ' + (isUnpaid(o) ? '' : 'pos'), (isUnpaid(o) ? '' : '+') + da(orderAmount(o))));
+    const amt = h(togglable ? 'button' : 'div', 'amt num ' + (isUnpaid(o) ? '' : 'pos') + (togglable ? ' edit' : ''), (isUnpaid(o) ? '' : '+') + da(orderAmount(o)));
+    if (togglable) {
+      amt.insertAdjacentHTML('beforeend', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>');
+      amt.addEventListener('click', (e) => { e.stopPropagation(); openEditor(o); });
+    }
+    row.append(avatar(o.client), body, amt);
     if (onTap) row.addEventListener('click', onTap);
     if (togglable) status.addEventListener('click', (e) => { e.stopPropagation(); togglePaid(o, status); });
     return row;
@@ -705,6 +732,35 @@
     load();
   }
   const togglePaid = (o) => setPaid([o], isUnpaid(o));
+
+  // ─── change an order's amount ────────────────────────
+  let editing = null;
+  function openEditor(o) {
+    editing = o;
+    $('ed-title').textContent = o.client.trim();
+    $('ed-sub').textContent = 'Prix calculé du devis : ' + da(o.devis) + (o.adjusted ? ' · montant actuel : ' + da(o.adjusted) : '');
+    $('ed-amount').value = String(orderAmount(o)).replace('.', ',');
+    $('ed-reset').hidden = !o.adjusted;
+    tick();
+    openSheet(true, $('edit-sheet'));
+    setTimeout(() => { $('ed-amount').focus(); $('ed-amount').select(); }, 260);
+  }
+  async function saveAmount(button, amount) {
+    const o = editing;
+    if (!o) return;
+    if (amount !== '' && !(num(amount) > 0)) return toast('Entrez un montant valide', false);
+    await busy(button, async () => {
+      try {
+        await api('montant', { row: o.row, amount });
+        openSheet(false);
+        toast(amount === '' ? 'Prix du devis rétabli · ' + da(o.devis) : 'Montant modifié · ' + da(amount));
+        await load();
+      } catch (err) { toast(err.message, false); }
+    });
+  }
+  $('ed-save').addEventListener('click', (e) => saveAmount(e.currentTarget, $('ed-amount').value.trim()));
+  $('ed-reset').addEventListener('click', (e) => saveAmount(e.currentTarget, ''));
+  $('ed-amount').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('ed-save').click(); });
   $('c-payall').addEventListener('click', () => {
     const c = clients.find((x) => x.key === currentClient);
     if (c) setPaid(c.orders.filter(isUnpaid), true);
@@ -782,9 +838,9 @@
           client: $('d-client').value, description: $('d-desc').value,
           width: $('d-width').value, height: $('d-height').value, qty: $('d-qty').value,
           type: selectedType, complete: $('d-complete').checked, material: $('d-material').value,
-          paid: $('d-paid').checked,
+          paid: $('d-paid').checked, price: $('d-price').value.trim(),
         });
-        toast('Devis enregistré · ' + da(q.total));
+        toast('Devis enregistré · ' + da(q.finalPrice ?? q.total));
         form.reset();
         $('d-qty').value = '1';
         $('d-material-wrap').hidden = true;

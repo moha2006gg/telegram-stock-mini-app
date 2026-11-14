@@ -82,7 +82,7 @@ async function nextRow(sheet, col) {
 
 // ─── Devis UV ────────────────────────────────────────────
 
-async function addQuote(client, widthCm, heightCm, qty, printType, isComplete, materialCost, paid = false) {
+async function addQuote(client, widthCm, heightCm, qty, printType, isComplete, materialCost, paid = false, finalPrice = null) {
   const tariff = TARIFFS[printType];
   const surface = (widthCm * heightCm) / 10000;
   const articlePrice = isComplete
@@ -117,13 +117,13 @@ async function addQuote(client, widthCm, heightCm, qty, printType, isComplete, m
     values: [[
       client,
       `='Devis UV'!K${row}`,
-      '',
+      finalPrice ?? '',
       `=IF(C${plRow}="",B${plRow},C${plRow})`,
       paidCell(paid),
     ]],
   });
 
-  return { client, widthCm, heightCm, qty, printType, surface, tariff, articlePrice, total, devisRow: row };
+  return { client, widthCm, heightCm, qty, printType, surface, tariff, articlePrice, total, finalPrice, devisRow: row };
 }
 
 async function getQuotes(limit) {
@@ -166,6 +166,20 @@ async function setPaid(rows, paid) {
   }
   await callScript('update', { sheet: PL_SHEET, range, values });
   return { updated: targets.size };
+}
+
+// Writes the agreed amount into "Ajusté" (C) for one P&L row; null clears it so the devis price applies again.
+async function setOrderAmount(row, amount) {
+  const r = Number(row);
+  if (!Number.isInteger(r) || r < PL_FIRST_ROW) return null;
+  const current = (await callScript('get', { sheet: PL_SHEET, range: `A${r}:A${r}` })).values || [];
+  if (!current[0] || !String(current[0][0] || '').trim()) return null;
+  await callScript('update', {
+    sheet: PL_SHEET,
+    range: `C${r}:D${r}`,
+    values: [[amount ?? '', `=IF(C${r}="",B${r},C${r})`]],
+  });
+  return { row: r, client: current[0][0], amount };
 }
 
 async function addLoss(description, amount) {
@@ -258,6 +272,7 @@ module.exports = {
   getQuotes,
   addProfit,
   setPaid,
+  setOrderAmount,
   addLoss,
   adjustPayment,
   getBalance,

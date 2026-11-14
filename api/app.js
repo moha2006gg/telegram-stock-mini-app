@@ -56,7 +56,17 @@ const actions = {
     if (!str(b.client)) throw bad('Client requis');
     if (!(width > 0) || !(height > 0) || !(qty > 0)) throw bad('Dimensions et quantite invalides');
     if (!type) throw bad('Type inconnu');
-    return sheets.addQuote(client, width, height, qty, type, complete, material, Boolean(b.paid));
+    const price = str(b.price) ? num(b.price) : null;
+    if (price !== null && !(price > 0)) throw bad('Prix final invalide');
+    return sheets.addQuote(client, width, height, qty, type, complete, material, Boolean(b.paid), price);
+  },
+
+  async montant(b) {
+    const amount = str(b.amount) ? num(b.amount) : null;
+    if (amount !== null && !(amount > 0)) throw bad('Montant invalide');
+    const r = await sheets.setOrderAmount(b.row, amount);
+    if (!r) throw bad('Commande introuvable');
+    return r;
   },
 
   async profit(b) {
