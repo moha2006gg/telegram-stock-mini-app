@@ -53,15 +53,15 @@ bot.action('home', async (ctx) => {
 
 const helpText =
   'Commandes :\n\n' +
-  '/solde - Solde net (profits - pertes)\n\n' +
+  '/solde - Solde net (profits - dépenses)\n\n' +
   '/devis <client> <larg_cm> <haut_cm> <qte> <type>\n' +
   '  Types : w, wv, wcv, eco, ecod\n' +
   '  Produit complet : ajouter oui <cout_materiau>\n' +
   '  Ex: /devis sami 23 10 53 wcv oui 155\n\n' +
   '/profit <client> <montant>\n' +
   '  Ex: /profit imed 4000\n\n' +
-  '/perte <description> <montant>\n' +
-  '  Ex: /perte "encre vernis" 13400\n\n' +
+  '/depense <description> <montant>\n' +
+  '  Ex: /depense "encre vernis" 13400\n\n' +
   '/ajuster <client> <montant>\n' +
   '  Ajuster le paiement recu\n' +
   '  Ex: /ajuster sami 1580\n\n' +
@@ -89,7 +89,7 @@ async function sendBalance(ctx, edit) {
       `Solde\n` +
       `${'─'.repeat(22)}\n` +
       `Profits :  ${sheets.fmtDA(b.profits)}\n` +
-      `Pertes :   ${sheets.fmtDA(b.losses)}\n` +
+      `Dépenses : ${sheets.fmtDA(b.losses)}\n` +
       `${'─'.repeat(22)}\n` +
       `Net :      ${sheets.fmtDA(b.net)}\n` +
       `Credit clients : ${sheets.fmtDA(b.credit)}`;
@@ -199,11 +199,11 @@ bot.command('profit', async (ctx) => {
   }
 });
 
-// ─── Perte ───────────────────────────────────────────────
+// ─── Dépense ─────────────────────────────────────────────
 
-bot.command('perte', async (ctx) => {
+bot.command(['depense', 'perte'], async (ctx) => {
   if (!isOwner(ctx)) return ctx.reply('Non autorise.');
-  const text = ctx.message.text.slice('/perte '.length).trim();
+  const text = ctx.message.text.replace(/^\/\S+\s*/, '').trim();
 
   let description, amountStr;
   if (text.startsWith('"')) {
@@ -213,7 +213,7 @@ bot.command('perte', async (ctx) => {
     amountStr = text.slice(end + 1).trim();
   } else {
     const parts = text.split(/\s+/);
-    if (parts.length < 2) return ctx.reply('Usage : /perte <description> <montant>\nEx: /perte "encre vernis" 13400');
+    if (parts.length < 2) return ctx.reply('Usage : /depense <description> <montant>\nEx: /depense "encre vernis" 13400');
     amountStr = parts.pop();
     description = parts.join(' ');
   }
@@ -225,17 +225,17 @@ bot.command('perte', async (ctx) => {
     const r = await sheets.addLoss(description, amount);
     const b = await sheets.getBalance();
     ctx.reply(
-      `Perte ajoutee\n\n` +
+      `Dépense ajoutée\n\n` +
         `${r.description} : -${sheets.fmtDA(r.amount)}\n\n` +
         `Solde net : ${sheets.fmtDA(b.net)}`
     );
   } catch (err) {
-    fail(ctx, 'perte', err);
+    fail(ctx, 'dépense', err);
   }
 });
 
 bot.command('loss', (ctx) => {
-  const newText = ctx.message.text.replace(/^\/loss/, '/perte');
+  const newText = ctx.message.text.replace(/^\/loss/, '/depense');
   ctx.message.text = newText;
   return bot.handleUpdate({ message: ctx.message });
 });
@@ -307,7 +307,7 @@ async function sendPL(ctx, edit) {
       `BILAN P&L\n` +
       `${'═'.repeat(24)}\n` +
       `Profits :  ${sheets.fmtDA(b.profits)}\n` +
-      `Pertes :   ${sheets.fmtDA(b.losses)}\n` +
+      `Dépenses : ${sheets.fmtDA(b.losses)}\n` +
       `Net :      ${sheets.fmtDA(b.net)}\n` +
       `${'═'.repeat(24)}\n\n`;
 
@@ -322,7 +322,7 @@ async function sendPL(ctx, edit) {
     }
 
     if (details.lossRows.length) {
-      text += `Pertes (${details.lossRows.length})\n` + '─'.repeat(22) + '\n';
+      text += `Dépenses (${details.lossRows.length})\n` + '─'.repeat(22) + '\n';
       for (const r of details.lossRows) {
         text += `${r.description || '—'} : ${r.amount} DA\n`;
       }

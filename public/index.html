@@ -260,13 +260,13 @@
     <div class="actions">
       <button data-go="devis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Devis</button>
       <button data-entry="profit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Encaisser</button>
-      <button data-entry="perte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>Perte</button>
+      <button data-entry="perte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>Dépense</button>
       <button data-go="msg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10 14M21 3l-7 18-4-7-7-4z"/></svg>Message</button>
     </div>
   </div>
   <div class="tiles">
     <div class="tile"><div class="k">Profits · DA</div><div class="v pos num" id="t-profits">—</div></div>
-    <div class="tile"><div class="k">Pertes · DA</div><div class="v neg num" id="t-losses">—</div></div>
+    <div class="tile"><div class="k">Dépenses · DA</div><div class="v neg num" id="t-losses">—</div></div>
     <button class="tile dark tap" data-go="clients" data-filter="credit"><div class="k">Crédit · DA</div><div class="v num" id="t-credit">—</div></button>
   </div>
   <div class="sec"><h2>Activité récente</h2><button class="link" data-go="activity">Voir tout</button></div>
@@ -281,7 +281,7 @@
     <button class="chip on" data-f="all">Tout</button>
     <button class="chip" data-f="orders">Commandes</button>
     <button class="chip" data-f="unpaid">Non payées</button>
-    <button class="chip" data-f="losses">Pertes</button>
+    <button class="chip" data-f="losses">Dépenses</button>
   </div>
   <div class="sec"><h2 id="act-count">&nbsp;</h2></div>
   <div class="list" id="act-list"></div>
@@ -350,7 +350,7 @@
   <div class="title-bar"><button class="round" data-back aria-label="Retour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><h1 id="e-title">Encaisser</h1><span class="spacer"></span></div>
   <div class="seg" id="e-seg">
     <button data-kind="profit" class="on">Encaisser</button>
-    <button data-kind="perte">Perte</button>
+    <button data-kind="perte">Dépense</button>
     <button data-kind="ajuster">Ajuster</button>
   </div>
   <div class="card" style="margin-top:14px">
@@ -413,7 +413,7 @@
   <div class="grab"></div>
   <button class="opt" data-go="devis"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span><span>Nouveau devis<small>Calcul automatique du prix</small></span></button>
   <button class="opt" data-entry="profit"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span><span>Encaisser un profit<small>Vente hors devis, paiement reçu</small></span></button>
-  <button class="opt" data-entry="perte"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg></span><span>Ajouter une perte<small>Encre, vernis, matériau…</small></span></button>
+  <button class="opt" data-entry="perte"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg></span><span>Ajouter une dépense<small>Encre, vernis, matériau…</small></span></button>
   <button class="opt" data-entry="ajuster"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span><span>Ajuster un paiement<small>Montant reçu différent du devis</small></span></button>
   <button class="opt" data-go="msg"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10 14M21 3l-7 18-4-7-7-4z"/></svg></span><span>Message client<small>Relevé des impayés ou confirmation</small></span></button>
 </div>
@@ -628,7 +628,7 @@
     ic.style.color = 'var(--red)';
     ic.textContent = '−';
     const body = h('div', 'body');
-    body.append(h('div', 't', l.description || 'Perte'), h('div', 's', 'Perte'));
+    body.append(h('div', 't', l.description || 'Dépense'), h('div', 's', 'Dépense'));
     row.append(ic, body, h('div', 'amt num neg', '−' + da(l.amount)));
     return row;
   }
@@ -855,7 +855,7 @@
   // ─── saisie (pavé numérique) ─────────────────────────
   const kinds = {
     profit: { title: 'Encaisser', name: 'Client', help: 'Vente hors devis', ok: 'Profit ajouté' },
-    perte: { title: 'Perte', name: 'Description', help: 'Encre, vernis, matériau…', ok: 'Perte ajoutée' },
+    perte: { title: 'Dépense', name: 'Description', help: 'Encre, vernis, matériau…', ok: 'Dépense ajoutée' },
     ajuster: { title: 'Ajuster', name: 'Commande', help: 'Montant réellement reçu pour cette commande', ok: 'Paiement ajusté' },
   };
   let amount = '';
