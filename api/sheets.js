@@ -3,6 +3,11 @@ const APPS_SCRIPT_SECRET = process.env.APPS_SCRIPT_SECRET;
 
 const DEVIS_SHEET = 'Devis UV';
 const PL_SHEET = 'Profits & Pertes';
+const PL_FIRST_ROW = 5;
+// P&L column E: "Oui" = paid, "Non" = still owed (credit), blank = not tracked (counted as paid).
+const paidCell = (paid) => (paid ? 'Oui' : 'Non');
+const isUnpaid = (v) => /^non$/i.test(String(v || '').trim());
+const parseNum = (v) => parseFloat((v || '').toString().replace(/\s/g, '').replace(',', '.')) || 0;
 
 const TARIFFS = {
   'W':                    3000,
@@ -77,7 +82,7 @@ async function nextRow(sheet, col) {
 
 // ─── Devis UV ────────────────────────────────────────────
 
-async function addQuote(client, widthCm, heightCm, qty, printType, isComplete, materialCost) {
+async function addQuote(client, widthCm, heightCm, qty, printType, isComplete, materialCost, paid = false) {
   const tariff = TARIFFS[printType];
   const surface = (widthCm * heightCm) / 10000;
   const articlePrice = isComplete
@@ -108,12 +113,13 @@ async function addQuote(client, widthCm, heightCm, qty, printType, isComplete, m
   const plRow = await nextRow(PL_SHEET, 'A');
   await callScript('update', {
     sheet: PL_SHEET,
-    range: `A${plRow}:D${plRow}`,
+    range: `A${plRow}:E${plRow}`,
     values: [[
       client,
       `='Devis UV'!K${row}`,
       '',
       `=IF(C${plRow}="",B${plRow},C${plRow})`,
+      paidCell(paid),
     ]],
   });
 
@@ -137,14 +143,29 @@ async function getQuotes(limit) {
 
 // ─── Profits & Pertes ────────────────────────────────────
 
-async function addProfit(client, amount) {
+async function addProfit(client, amount, paid = true) {
   const row = await nextRow(PL_SHEET, 'A');
   await callScript('update', {
     sheet: PL_SHEET,
-    range: `A${row}:D${row}`,
-    values: [[client, amount, '', amount]],
+    range: `A${row}:E${row}`,
+    values: [[client, amount, '', amount, paidCell(paid)]],
   });
   return { client, amount, row };
+}
+
+async function setPaid(rows, paid) {
+  const targets = new Set(rows.map(Number).filter((r) => Number.isInteger(r) && r >= PL_FIRST_ROW && r < 100000));
+  if (!targets.size) return { updated: 0 };
+  const last = Math.max(...targets);
+  const range = `E${PL_FIRST_ROW}:E${last}`;
+  const current = (await callScript('get', { sheet: PL_SHEET, range })).values || [];
+  const values = [];
+  for (let r = PL_FIRST_ROW; r <= last; r++) {
+    const existing = current[r - PL_FIRST_ROW] ? current[r - PL_FIRST_ROW][0] : '';
+    values.push([targets.has(r) ? paidCell(paid) : existing]);
+  }
+  await callScript('update', { sheet: PL_SHEET, range, values });
+  return { updated: targets.size };
 }
 
 async function addLoss(description, amount) {
@@ -192,31 +213,35 @@ async function adjustPayment(clientSearch, amount) {
 
 async function getBalance() {
   const [profitRes, lossRes] = await Promise.all([
-    callScript('get', { sheet: PL_SHEET, range: 'D5:D' }),
+    callScript('get', { sheet: PL_SHEET, range: 'D5:E' }),
     callScript('get', { sheet: PL_SHEET, range: 'G5:G' }),
   ]);
 
-  const parseNum = (v) => parseFloat((v || '').toString().replace(/\s/g, '').replace(',', '.')) || 0;
-
-  const profits = (profitRes.values || []).reduce((sum, r) => sum + parseNum(r[0]), 0);
+  const profitRows = profitRes.values || [];
+  const profits = profitRows.reduce((sum, r) => sum + parseNum(r[0]), 0);
+  const credit = profitRows.reduce((sum, r) => sum + (isUnpaid(r[1]) ? parseNum(r[0]) : 0), 0);
   const losses = (lossRes.values || []).reduce((sum, r) => sum + parseNum(r[0]), 0);
+  const round = (n) => Math.round(n * 100) / 100;
 
-  return {
-    profits: Math.round(profits * 100) / 100,
-    losses: Math.round(losses * 100) / 100,
-    net: Math.round((profits - losses) * 100) / 100,
-  };
+  return { profits: round(profits), losses: round(losses), net: round(profits - losses), credit: round(credit) };
 }
 
 async function getPLDetails() {
   const [profitRes, lossRes] = await Promise.all([
-    callScript('get', { sheet: PL_SHEET, range: 'A5:D' }),
+    callScript('get', { sheet: PL_SHEET, range: 'A5:E' }),
     callScript('get', { sheet: PL_SHEET, range: 'F5:G' }),
   ]);
 
   const profitRows = (profitRes.values || [])
-    .filter(r => r[0] && r[0].trim())
-    .map(r => ({ client: r[0], devis: r[1] || '', adjusted: r[2] || '', profit: r[3] || '' }));
+    .map((r, i) => ({
+      row: PL_FIRST_ROW + i,
+      client: r[0] || '',
+      devis: r[1] || '',
+      adjusted: r[2] || '',
+      profit: r[3] || '',
+      paid: isUnpaid(r[4]) ? 'Non' : String(r[4] || '').trim(),
+    }))
+    .filter(r => r.client.trim());
 
   const lossRows = (lossRes.values || [])
     .filter(r => (r[0] && r[0].trim()) || (r[1] && r[1].toString().trim()))
@@ -232,6 +257,7 @@ module.exports = {
   addQuote,
   getQuotes,
   addProfit,
+  setPaid,
   addLoss,
   adjustPayment,
   getBalance,

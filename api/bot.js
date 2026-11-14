@@ -91,7 +91,8 @@ async function sendBalance(ctx, edit) {
       `Profits :  ${sheets.fmtDA(b.profits)}\n` +
       `Pertes :   ${sheets.fmtDA(b.losses)}\n` +
       `${'─'.repeat(22)}\n` +
-      `Net :      ${sheets.fmtDA(b.net)}`;
+      `Net :      ${sheets.fmtDA(b.net)}\n` +
+      `Credit clients : ${sheets.fmtDA(b.credit)}`;
     return edit ? ctx.editMessageText(text, back) : ctx.reply(text);
   } catch (err) {
     fail(ctx, 'balance', err);

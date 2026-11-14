@@ -40,39 +40,35 @@ const str = (v) => String(v ?? '').trim();
 
 const actions = {
   async summary() {
-    const [balance, pl, quotes] = await Promise.all([
-      sheets.getBalance(),
-      sheets.getPLDetails(),
-      sheets.getQuotes(8),
-    ]);
-    return {
-      balance,
-      profits: pl.profitRows.slice(-8).reverse(),
-      losses: pl.lossRows.slice(-8).reverse(),
-      quotes,
-      tariffs: sheets.TARIFFS,
-    };
+    const [balance, pl] = await Promise.all([sheets.getBalance(), sheets.getPLDetails()]);
+    return { balance, orders: pl.profitRows, losses: pl.lossRows, tariffs: sheets.TARIFFS };
   },
 
   async devis(b) {
-    const client = str(b.client);
+    const description = str(b.description);
+    const client = description ? `${str(b.client)} / ${description}` : str(b.client);
     const width = num(b.width);
     const height = num(b.height);
     const qty = parseInt(b.qty, 10);
     const type = sheets.resolvePrintType(str(b.type));
     const complete = Boolean(b.complete);
     const material = complete ? num(b.material) || 0 : 0;
-    if (!client) throw bad('Client requis');
+    if (!str(b.client)) throw bad('Client requis');
     if (!(width > 0) || !(height > 0) || !(qty > 0)) throw bad('Dimensions et quantite invalides');
     if (!type) throw bad('Type inconnu');
-    return sheets.addQuote(client, width, height, qty, type, complete, material);
+    return sheets.addQuote(client, width, height, qty, type, complete, material, Boolean(b.paid));
   },
 
   async profit(b) {
     const client = str(b.client);
     const amount = num(b.amount);
     if (!client || !(amount > 0)) throw bad('Client et montant requis');
-    return sheets.addProfit(client, amount);
+    return sheets.addProfit(client, amount, b.paid !== false);
+  },
+
+  async payer(b) {
+    if (!Array.isArray(b.rows) || !b.rows.length) throw bad('Aucune commande choisie');
+    return sheets.setPaid(b.rows, b.paid !== false);
   },
 
   async perte(b) {

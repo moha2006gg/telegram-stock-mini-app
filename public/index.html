@@ -4,215 +4,444 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>UV Printing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   :root {
-    --bg: var(--tg-theme-secondary-bg-color, #f2f2f7);
-    --card: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, #ffffff));
-    --text: var(--tg-theme-text-color, #111111);
-    --hint: var(--tg-theme-hint-color, #8e8e93);
-    --accent: var(--tg-theme-button-color, #2481cc);
-    --accent-text: var(--tg-theme-button-text-color, #ffffff);
-    --danger: var(--tg-theme-destructive-text-color, #e5484d);
-    --ok: #2e9d58;
-    --sep: var(--tg-theme-section-separator-color, rgba(128, 128, 128, 0.18));
-    --field: var(--tg-theme-bg-color, #ffffff);
-    --radius: 14px;
+    --bg-top: #d7efe2;
+    --bg-bottom: #f3f8f5;
+    --card: #ffffff;
+    --card-soft: rgba(255, 255, 255, 0.62);
+    --ink: #0f1713;
+    --muted: #6d7c74;
+    --line: rgba(15, 23, 19, 0.08);
+    --lime: #eef36a;
+    --lime-ink: #10170f;
+    --green: #1e9a55;
+    --red: #e0484d;
+    --red-soft: #fde7e7;
+    --green-soft: #e1f5e8;
+    --shadow: 0 8px 28px rgba(31, 80, 55, 0.10);
+    --radius: 22px;
+    --dark-tile: #0f1713;
   }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-tg]) {
-      --bg: #0f0f10; --card: #1c1c1e; --text: #f2f2f2; --hint: #8e8e93; --field: #2c2c2e;
-    }
+  :root[data-theme="dark"] {
+    --bg-top: #0e1b15;
+    --bg-bottom: #0b110e;
+    --card: #17221c;
+    --card-soft: rgba(30, 44, 36, 0.7);
+    --ink: #eef5f0;
+    --muted: #8fa198;
+    --line: rgba(255, 255, 255, 0.07);
+    --red-soft: rgba(224, 72, 77, 0.16);
+    --green-soft: rgba(30, 154, 85, 0.18);
+    --shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+    --dark-tile: #060a08;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  html { background: var(--bg-bottom); }
   body {
-    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-    padding: 12px 16px calc(84px + env(safe-area-inset-bottom));
-    min-height: 100vh;
+    margin: 0; min-height: 100vh; color: var(--ink);
+    background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 55%) fixed;
+    font: 500 15px/1.4 Manrope, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 14px 16px calc(110px + env(safe-area-inset-bottom));
   }
-  h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--hint); margin: 22px 4px 8px; }
-  .card { background: var(--card); border-radius: var(--radius); padding: 14px 16px; }
-  .hero { text-align: center; padding: 22px 16px 18px; }
-  .hero .label { color: var(--hint); font-size: 14px; }
-  .hero .big { font-size: 34px; font-weight: 700; letter-spacing: -.02em; margin: 4px 0 14px; font-variant-numeric: tabular-nums; }
-  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .split > div { background: var(--bg); border-radius: 10px; padding: 8px 10px; }
-  .split .k { font-size: 12px; color: var(--hint); }
-  .split .v { font-weight: 600; font-variant-numeric: tabular-nums; }
-  .pos { color: var(--ok); } .neg { color: var(--danger); }
-  .list { background: var(--card); border-radius: var(--radius); overflow: hidden; }
-  .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 1px solid var(--sep); }
-  .row:last-child { border-bottom: 0; }
-  .row .main { min-width: 0; }
-  .row .title { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .row .sub { font-size: 13px; color: var(--hint); }
-  .row .amt { font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .empty { padding: 14px 16px; color: var(--hint); font-size: 14px; }
-  label { display: block; font-size: 13px; color: var(--hint); margin: 12px 2px 6px; }
-  input {
-    width: 100%; font: inherit; color: var(--text); background: var(--field);
-    border: 1px solid var(--sep); border-radius: 10px; padding: 11px 12px; outline: none;
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* ── header ── */
+  .head { display: flex; align-items: center; gap: 10px; margin: 2px 2px 16px; }
+  .head .who { flex: 1; min-width: 0; }
+  .head .hello { font-size: 13px; color: var(--muted); }
+  .head .name { font-weight: 700; font-size: 16px; }
+  .round {
+    width: 40px; height: 40px; border-radius: 50%; border: 0; display: grid; place-items: center;
+    background: var(--card-soft); box-shadow: var(--shadow); color: var(--ink);
   }
-  input:focus { border-color: var(--accent); }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .round svg { width: 20px; height: 20px; }
+  .title-bar { display: flex; align-items: center; gap: 10px; margin: 2px 2px 16px; }
+  .title-bar h1 { flex: 1; text-align: center; font-size: 17px; margin: 0; font-weight: 700; }
+  .title-bar .spacer { width: 40px; }
+
+  /* ── hero ── */
+  .hero {
+    background: var(--lime); color: var(--lime-ink); border-radius: 28px; padding: 18px 18px 14px;
+    box-shadow: 0 12px 30px rgba(170, 180, 30, 0.25); text-align: center;
+  }
+  .hero .cap { font-size: 12px; font-weight: 700; letter-spacing: .06em; opacity: .7; }
+  .hero .big { font-size: 38px; font-weight: 800; letter-spacing: -.02em; margin: 2px 0 2px; }
+  .hero .sub { font-size: 13px; font-weight: 600; opacity: .75; }
+  .hero .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 16px; }
+  .hero .actions button {
+    border: 0; background: rgba(255, 255, 255, 0.55); border-radius: 16px; padding: 10px 2px 8px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--lime-ink);
+  }
+  .hero .actions svg { width: 20px; height: 20px; }
+
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+  .tile { background: var(--card); border-radius: 18px; padding: 12px; box-shadow: var(--shadow); min-width: 0; }
+  .tile .k { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .tile .v { font-weight: 800; font-size: 15px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile.dark { background: var(--dark-tile); color: #eef5f0; }
+  .tile.dark .k { color: inherit; opacity: .7; }
+  .tile.dark .v { color: var(--lime); }
+  .tile.tap { border: 0; text-align: left; }
+
+  /* ── sections & lists ── */
+  .sec { display: flex; justify-content: space-between; align-items: baseline; margin: 22px 4px 10px; }
+  .sec h2 { font-size: 16px; margin: 0; font-weight: 800; }
+  .link { border: 0; background: none; color: var(--muted); font-size: 13px; font-weight: 700; padding: 0; }
+  .list { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); width: 100%; background: none; border-left: 0; border-right: 0; border-top: 0; text-align: left; }
+  .item:last-child { border-bottom: 0; }
+  .item .body { flex: 1; min-width: 0; }
+  .item .t { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .s { font-size: 12.5px; color: var(--muted); display: flex; gap: 6px; align-items: center; margin-top: 1px; }
+  .item .amt { font-weight: 800; white-space: nowrap; }
+  .pos { color: var(--green); } .neg { color: var(--red); }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%; flex: none; display: grid; place-items: center;
+    font-weight: 800; font-size: 14px; color: #1d2a22; text-transform: uppercase;
+  }
+  .avatar.lg { width: 64px; height: 64px; font-size: 22px; }
+  .pill { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; border: 0; }
+  .pill.unpaid { background: var(--red-soft); color: var(--red); }
+  .pill.paid { background: var(--green-soft); color: var(--green); }
+  .pill.big { font-size: 12.5px; padding: 6px 12px; }
+  .empty { padding: 16px; color: var(--muted); font-size: 14px; text-align: center; }
+
+  /* ── search & chips ── */
+  .search {
+    display: flex; align-items: center; gap: 8px; background: var(--card); border-radius: 16px;
+    padding: 0 14px; box-shadow: var(--shadow);
+  }
+  .search svg { width: 18px; height: 18px; color: var(--muted); flex: none; }
+  .search input { flex: 1; border: 0; background: none; outline: none; padding: 13px 0; min-width: 0; }
+  .chips { display: flex; gap: 8px; overflow-x: auto; margin: 12px -16px 0; padding: 0 16px 2px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
   .chip {
-    border: 1px solid var(--sep); background: var(--field); color: var(--text);
-    border-radius: 999px; padding: 8px 12px; font: inherit; font-size: 14px; cursor: pointer;
+    flex: none; border: 1px solid var(--line); background: var(--card); border-radius: 999px;
+    padding: 8px 14px; font-size: 13.5px; font-weight: 700;
   }
-  .chip small { color: var(--hint); margin-left: 4px; }
-  .chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
-  .chip.on small { color: var(--accent-text); opacity: .8; }
-  .seg { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--card); border-radius: 12px; padding: 4px; gap: 4px; }
-  .seg button { border: 0; background: transparent; color: var(--text); font: inherit; font-weight: 500; padding: 9px; border-radius: 9px; cursor: pointer; }
-  .seg button.on { background: var(--accent); color: var(--accent-text); }
-  .toggle { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
-  .toggle input { width: auto; transform: scale(1.3); }
-  .calc { margin-top: 16px; }
-  .calc .line { display: flex; justify-content: space-between; padding: 3px 0; font-variant-numeric: tabular-nums; }
-  .calc .line.total { font-size: 20px; font-weight: 700; border-top: 1px solid var(--sep); margin-top: 6px; padding-top: 8px; }
-  .btn {
-    display: block; width: 100%; margin-top: 16px; border: 0; border-radius: 12px; padding: 14px;
-    font: inherit; font-weight: 600; background: var(--accent); color: var(--accent-text); cursor: pointer;
+  .chip small { color: var(--muted); font-weight: 600; margin-left: 4px; }
+  .chip.on { background: var(--ink); color: var(--bg-bottom); border-color: var(--ink); }
+  .chip.on small { color: inherit; opacity: .7; }
+  .wrap-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  /* ── forms ── */
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; }
+  label.f { display: block; font-size: 12.5px; color: var(--muted); font-weight: 700; margin: 14px 2px 6px; }
+  label.f:first-child { margin-top: 0; }
+  .field { position: relative; }
+  .input {
+    width: 100%; border: 1px solid var(--line); background: var(--bg-bottom); border-radius: 14px;
+    padding: 12px 14px; outline: none;
   }
-  .btn.secondary { background: var(--card); color: var(--accent); border: 1px solid var(--sep); }
-  .btn:disabled { opacity: .55; }
-  pre.preview {
-    margin: 0; white-space: pre-wrap; word-break: break-word; font: 14px/1.45 ui-monospace, Menlo, monospace;
+  .input:focus { border-color: var(--ink); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stepper { display: flex; align-items: center; background: var(--bg-bottom); border: 1px solid var(--line); border-radius: 14px; }
+  .stepper button { border: 0; background: none; width: 46px; height: 44px; font-size: 20px; font-weight: 700; }
+  .stepper input { flex: 1; border: 0; background: none; text-align: center; outline: none; font-weight: 800; min-width: 0; }
+  .switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; font-weight: 700; }
+  .switch input { appearance: none; width: 46px; height: 28px; border-radius: 999px; background: var(--line); position: relative; flex: none; transition: .15s; }
+  .switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: .15s; }
+  .switch input:checked { background: var(--green); }
+  .switch input:checked::after { left: 21px; }
+  .sum { background: var(--lime); color: var(--lime-ink); border-radius: 18px; padding: 12px 14px; margin-top: 16px; }
+  .sum .l { display: flex; justify-content: space-between; font-weight: 600; font-size: 14px; padding: 2px 0; }
+  .sum .l.total { font-size: 20px; font-weight: 800; border-top: 1px solid rgba(0,0,0,.12); margin-top: 6px; padding-top: 8px; }
+  .cta {
+    display: block; width: 100%; margin-top: 16px; border: 0; border-radius: 999px; padding: 16px;
+    font-weight: 800; background: var(--ink); color: var(--bg-bottom);
   }
-  .topbar { display: flex; justify-content: space-between; align-items: center; }
-  .topbar h1 { font-size: 22px; margin: 4px 4px 12px; }
-  .icon-btn { border: 0; background: none; color: var(--accent); font: inherit; font-size: 15px; padding: 6px; cursor: pointer; }
-  .tabs {
-    position: fixed; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr);
-    background: var(--card); border-top: 1px solid var(--sep); padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  .cta.ghost { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+  .cta:disabled { opacity: .5; }
+
+  .suggest {
+    position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 20; background: var(--card);
+    border-radius: 16px; box-shadow: 0 14px 40px rgba(0,0,0,.18); overflow: hidden; display: none;
   }
-  .tabs button {
-    border: 0; background: none; color: var(--hint); font: inherit; font-size: 12px; font-weight: 500;
-    padding: 6px 0; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer;
+  .suggest.open { display: block; }
+  .suggest button { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: none; padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); }
+  .suggest button:last-child { border-bottom: 0; }
+  .suggest .avatar { width: 30px; height: 30px; font-size: 12px; }
+  .suggest .meta { margin-left: auto; font-size: 12px; color: var(--muted); }
+
+  /* ── keypad ── */
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--card-soft); border-radius: 999px; padding: 4px; box-shadow: var(--shadow); }
+  .seg button { border: 0; background: none; border-radius: 999px; padding: 10px 4px; font-weight: 700; font-size: 14px; }
+  .seg button.on { background: var(--ink); color: var(--bg-bottom); }
+  .amount { text-align: center; margin: 22px 0 4px; }
+  .amount .v { font-size: 44px; font-weight: 800; letter-spacing: -.02em; }
+  .amount .h { font-size: 13px; color: var(--muted); font-weight: 600; min-height: 18px; }
+  .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+  .keypad button { border: 0; background: var(--card); border-radius: 18px; padding: 14px 0; font-size: 22px; font-weight: 700; box-shadow: var(--shadow); }
+  .keypad svg { width: 22px; height: 22px; vertical-align: middle; }
+
+  /* ── client detail ── */
+  .profile { text-align: center; margin-bottom: 14px; }
+  .profile .avatar { margin: 0 auto 8px; }
+  .profile h2 { margin: 0; font-size: 20px; font-weight: 800; }
+  .profile .s { color: var(--muted); font-size: 13px; font-weight: 600; }
+  .stats3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stats3 .tile { text-align: center; padding: 10px 6px; }
+  .stats3 .v { font-size: 13.5px; }
+
+  pre.preview { margin: 0; white-space: pre-wrap; word-break: break-word; font: 600 13.5px/1.5 ui-monospace, Menlo, monospace; }
+
+  /* ── nav ── */
+  .nav {
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom));
+    display: flex; align-items: center; gap: 4px; padding: 6px; border-radius: 999px;
+    background: var(--card); box-shadow: 0 10px 36px rgba(0, 0, 0, .16); z-index: 30;
   }
-  .tabs button svg { width: 24px; height: 24px; }
-  .tabs button.on { color: var(--accent); }
-  .page { display: none; } .page.on { display: block; }
+  .nav button { border: 0; background: none; width: 52px; height: 48px; border-radius: 999px; display: grid; place-items: center; color: var(--muted); }
+  .nav button svg { width: 23px; height: 23px; }
+  .nav button.on { color: var(--ink); background: var(--bg-top); }
+  .nav button.plus { background: var(--ink); color: var(--bg-bottom); width: 56px; height: 56px; margin: -8px 4px; box-shadow: 0 8px 20px rgba(0,0,0,.25); }
+
+  .page { display: none; } .page.on { display: block; animation: in .18s ease-out; }
+  @keyframes in { from { opacity: 0; transform: translateY(6px); } }
+
+  .sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 40; opacity: 0; pointer-events: none; transition: .2s; }
+  .sheet-bg.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 41; background: var(--bg-bottom);
+    border-radius: 28px 28px 0 0; padding: 10px 16px calc(20px + env(safe-area-inset-bottom));
+    transform: translateY(105%); transition: transform .25s ease;
+  }
+  .sheet.open { transform: none; }
+  .sheet .grab { width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 14px; }
+  .sheet .opt { display: flex; align-items: center; gap: 14px; width: 100%; border: 0; background: var(--card); border-radius: 18px; padding: 14px; margin-bottom: 8px; text-align: left; font-weight: 700; box-shadow: var(--shadow); }
+  .sheet .opt .ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--lime); color: var(--lime-ink); }
+  .sheet .opt .ic svg { width: 20px; height: 20px; }
+  .sheet .opt small { display: block; color: var(--muted); font-weight: 600; font-size: 12.5px; }
+
   .toast {
-    position: fixed; left: 16px; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom));
-    padding: 12px 14px; border-radius: 12px; color: #fff; font-weight: 500; text-align: center;
-    transform: translateY(20px); opacity: 0; transition: .2s; pointer-events: none;
+    position: fixed; left: 16px; right: 16px; bottom: calc(92px + env(safe-area-inset-bottom)); z-index: 50;
+    padding: 13px 16px; border-radius: 16px; color: #fff; font-weight: 700; text-align: center;
+    transform: translateY(16px); opacity: 0; transition: .2s; pointer-events: none;
   }
   .toast.show { transform: none; opacity: 1; }
-  .toast.ok { background: var(--ok); } .toast.err { background: var(--danger); }
-  .notice { text-align: center; color: var(--hint); padding: 40px 10px; }
-  .skeleton { color: transparent !important; background: var(--sep); border-radius: 6px; }
+  .toast.ok { background: var(--green); } .toast.err { background: var(--red); }
+  .notice { text-align: center; color: var(--muted); padding: 60px 10px; font-weight: 600; }
 </style>
 </head>
 <body>
 
+<!-- ═══ Accueil ═══ -->
 <section class="page on" id="p-home">
-  <div class="topbar"><h1>UV Printing</h1><button class="icon-btn" id="refresh">Actualiser</button></div>
-  <div class="card hero">
-    <div class="label">Solde net</div>
-    <div class="big" id="net">—</div>
-    <div class="split">
-      <div><div class="k">Profits</div><div class="v pos" id="profits">—</div></div>
-      <div><div class="k">Pertes</div><div class="v neg" id="losses">—</div></div>
+  <div class="head">
+    <div class="avatar" id="me-avatar" style="background:var(--lime)">UV</div>
+    <div class="who"><div class="hello">Bonjour,</div><div class="name" id="me-name">UV Printing</div></div>
+    <button class="round" id="refresh" aria-label="Actualiser"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5"/></svg></button>
+  </div>
+  <div class="hero">
+    <div class="cap">SOLDE NET · DA</div>
+    <div class="big num" id="net">—</div>
+    <div class="sub num" id="net-sub">&nbsp;</div>
+    <div class="actions">
+      <button data-go="devis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Devis</button>
+      <button data-entry="profit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Encaisser</button>
+      <button data-entry="perte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>Perte</button>
+      <button data-go="msg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10 14M21 3l-7 18-4-7-7-4z"/></svg>Message</button>
     </div>
   </div>
-  <h2>Derniers devis</h2><div class="list" id="quotes"><div class="empty">Chargement…</div></div>
-  <h2>Derniers profits</h2><div class="list" id="profit-list"><div class="empty">Chargement…</div></div>
-  <h2>Dernières pertes</h2><div class="list" id="loss-list"><div class="empty">Chargement…</div></div>
+  <div class="tiles">
+    <div class="tile"><div class="k">Profits · DA</div><div class="v pos num" id="t-profits">—</div></div>
+    <div class="tile"><div class="k">Pertes · DA</div><div class="v neg num" id="t-losses">—</div></div>
+    <button class="tile dark tap" data-go="clients" data-filter="credit"><div class="k">Crédit · DA</div><div class="v num" id="t-credit">—</div></button>
+  </div>
+  <div class="sec"><h2>Activité récente</h2><button class="link" data-go="activity">Voir tout</button></div>
+  <div class="list" id="home-list"><div class="empty">Chargement…</div></div>
 </section>
 
+<!-- ═══ Activité ═══ -->
+<section class="page" id="p-activity">
+  <div class="title-bar"><span class="spacer"></span><h1>Activité</h1><span class="spacer"></span></div>
+  <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="act-q" type="search" placeholder="Rechercher un client, une commande…"></label>
+  <div class="chips" id="act-filter">
+    <button class="chip on" data-f="all">Tout</button>
+    <button class="chip" data-f="orders">Commandes</button>
+    <button class="chip" data-f="unpaid">Non payées</button>
+    <button class="chip" data-f="losses">Pertes</button>
+  </div>
+  <div class="sec"><h2 id="act-count">&nbsp;</h2></div>
+  <div class="list" id="act-list"></div>
+</section>
+
+<!-- ═══ Clients ═══ -->
+<section class="page" id="p-clients">
+  <div class="title-bar"><span class="spacer"></span><h1>Clients</h1><span class="spacer"></span></div>
+  <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="cl-q" type="search" placeholder="Rechercher un client…"></label>
+  <div class="chips" id="cl-filter">
+    <button class="chip on" data-f="all">Tous</button>
+    <button class="chip" data-f="credit">Avec crédit</button>
+  </div>
+  <div class="sec"><h2 id="cl-count">&nbsp;</h2></div>
+  <div class="list" id="cl-list"></div>
+</section>
+
+<!-- ═══ Fiche client ═══ -->
+<section class="page" id="p-client">
+  <div class="title-bar"><button class="round" data-back aria-label="Retour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><h1>Client</h1><span class="spacer"></span></div>
+  <div class="profile"><div class="avatar lg" id="c-avatar"></div><h2 id="c-name"></h2><div class="s" id="c-sub"></div></div>
+  <div class="stats3">
+    <div class="tile"><div class="k">Commandé</div><div class="v num" id="c-total"></div></div>
+    <div class="tile"><div class="k">Payé</div><div class="v pos num" id="c-paid"></div></div>
+    <div class="tile dark"><div class="k">Crédit</div><div class="v num" id="c-credit"></div></div>
+  </div>
+  <button class="cta" id="c-payall">Tout marquer payé</button>
+  <div class="sec"><h2>Commandes</h2><span class="link">Touchez le statut pour changer</span></div>
+  <div class="list" id="c-orders"></div>
+</section>
+
+<!-- ═══ Nouveau devis ═══ -->
 <section class="page" id="p-devis">
-  <div class="topbar"><h1>Nouveau devis</h1></div>
+  <div class="title-bar"><button class="round" data-back aria-label="Retour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><h1>Nouveau devis</h1><span class="spacer"></span></div>
   <form class="card" id="f-devis" autocomplete="off">
-    <label for="d-client">Client</label>
-    <input id="d-client" name="client" required>
+    <label class="f" for="d-client">Client</label>
+    <div class="field"><input class="input" id="d-client" placeholder="Rechercher ou nouveau client" required><div class="suggest"></div></div>
+    <label class="f" for="d-desc">Description (optionnel)</label>
+    <input class="input" id="d-desc" placeholder="ex : cadre, boîtes, invitations">
     <div class="grid2">
-      <div><label for="d-width">Largeur (cm)</label><input id="d-width" name="width" inputmode="decimal" required></div>
-      <div><label for="d-height">Hauteur (cm)</label><input id="d-height" name="height" inputmode="decimal" required></div>
+      <div><label class="f" for="d-width">Largeur (cm)</label><input class="input num" id="d-width" inputmode="decimal" required></div>
+      <div><label class="f" for="d-height">Hauteur (cm)</label><input class="input num" id="d-height" inputmode="decimal" required></div>
     </div>
-    <label for="d-qty">Quantité</label>
-    <input id="d-qty" name="qty" inputmode="numeric" value="1" required>
-    <label>Type d'impression</label>
-    <div class="chips" id="d-types"></div>
-    <div class="toggle"><span>Produit complet (avec matériau)</span><input type="checkbox" id="d-complete"></div>
-    <div id="d-material-wrap" hidden>
-      <label for="d-material">Coût matériau par article (DA)</label>
-      <input id="d-material" name="material" inputmode="decimal">
+    <label class="f" for="d-qty">Quantité</label>
+    <div class="stepper"><button type="button" data-step="-1">−</button><input id="d-qty" class="num" inputmode="numeric" value="1"><button type="button" data-step="1">+</button></div>
+    <label class="f">Type d'impression</label>
+    <div class="wrap-chips" id="d-types"></div>
+    <label class="switch"><span>Produit complet (avec matériau)</span><input type="checkbox" id="d-complete"></label>
+    <div id="d-material-wrap" hidden><label class="f" for="d-material">Coût matériau par article (DA)</label><input class="input num" id="d-material" inputmode="decimal"></div>
+    <label class="switch"><span>Déjà payé</span><input type="checkbox" id="d-paid"></label>
+    <div class="sum">
+      <div class="l"><span>Surface</span><span class="num" id="c-surface">—</span></div>
+      <div class="l"><span>Prix par article</span><span class="num" id="c-article">—</span></div>
+      <div class="l total"><span>Total</span><span class="num" id="c-sum">—</span></div>
     </div>
-    <div class="calc">
-      <div class="line"><span>Surface</span><span id="c-surface">—</span></div>
-      <div class="line"><span>Prix par article</span><span id="c-article">—</span></div>
-      <div class="line total"><span>Total</span><span id="c-total">—</span></div>
-    </div>
-    <button class="btn" type="submit">Enregistrer le devis</button>
+    <button class="cta" type="submit">Enregistrer le devis</button>
   </form>
 </section>
 
+<!-- ═══ Saisie (pavé) ═══ -->
 <section class="page" id="p-entry">
-  <div class="topbar"><h1>Saisie</h1></div>
+  <div class="title-bar"><button class="round" data-back aria-label="Retour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><h1 id="e-title">Encaisser</h1><span class="spacer"></span></div>
   <div class="seg" id="e-seg">
-    <button type="button" data-kind="profit" class="on">Profit</button>
-    <button type="button" data-kind="perte">Perte</button>
-    <button type="button" data-kind="ajuster">Ajuster</button>
+    <button data-kind="profit" class="on">Encaisser</button>
+    <button data-kind="perte">Perte</button>
+    <button data-kind="ajuster">Ajuster</button>
   </div>
-  <form class="card" id="f-entry" autocomplete="off" style="margin-top:12px">
-    <label for="e-name" id="e-name-label">Client</label>
-    <input id="e-name" required>
-    <label for="e-amount" id="e-amount-label">Montant (DA)</label>
-    <input id="e-amount" inputmode="decimal" required>
-    <p class="sub" id="e-help" style="color:var(--hint);font-size:13px;margin:10px 2px 0"></p>
-    <button class="btn" type="submit" id="e-submit">Ajouter le profit</button>
-  </form>
+  <div class="card" style="margin-top:14px">
+    <label class="f" for="e-name" id="e-name-label">Client</label>
+    <div class="field"><input class="input" id="e-name" autocomplete="off"><div class="suggest"></div></div>
+    <label class="switch" id="e-paid-wrap"><span>Payé</span><input type="checkbox" id="e-paid" checked></label>
+  </div>
+  <div class="amount"><div class="v num" id="e-amount">0 DA</div><div class="h" id="e-help"></div></div>
+  <div class="keypad" id="keypad">
+    <button>1</button><button>2</button><button>3</button>
+    <button>4</button><button>5</button><button>6</button>
+    <button>7</button><button>8</button><button>9</button>
+    <button>,</button><button>0</button>
+    <button data-del aria-label="Effacer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H9l-7 7 7 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="m16 9-6 6M10 9l6 6"/></svg></button>
+  </div>
+  <button class="cta" id="e-submit">Valider</button>
 </section>
 
+<!-- ═══ Message client ═══ -->
 <section class="page" id="p-msg">
-  <div class="topbar"><h1>Message client</h1></div>
+  <div class="title-bar"><button class="round" data-back aria-label="Retour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><h1>Message client</h1><span class="spacer"></span></div>
   <form class="card" id="f-msg" autocomplete="off">
-    <label for="m-client">Destinataire</label>
-    <input id="m-client" required>
-    <label for="m-amount">Montant (DA)</label>
-    <input id="m-amount" inputmode="decimal" required>
-    <label for="m-ref">Référence</label>
-    <input id="m-ref" placeholder="ex : Impression UV boîtes" required>
+    <label class="f" for="m-client">Destinataire</label>
+    <div class="field"><input class="input" id="m-client" required><div class="suggest"></div></div>
+    <label class="f" for="m-amount">Montant (DA)</label>
+    <input class="input num" id="m-amount" inputmode="decimal" required>
+    <label class="f" for="m-ref">Référence</label>
+    <input class="input" id="m-ref" placeholder="ex : Impression UV boîtes" required>
   </form>
-  <h2>Aperçu</h2>
+  <div class="sec"><h2>Aperçu</h2></div>
   <div class="card"><pre class="preview" id="m-preview"></pre></div>
-  <button class="btn" type="button" id="m-send">Envoyer dans le chat pour transférer</button>
-  <button class="btn secondary" type="button" id="m-copy">Copier le message</button>
+  <button class="cta" id="m-send">Envoyer dans le chat pour transférer</button>
+  <button class="cta ghost" id="m-copy">Copier le message</button>
 </section>
 
-<nav class="tabs">
-  <button data-page="home" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Accueil</button>
-  <button data-page="devis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>Devis</button>
-  <button data-page="entry"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Saisie</button>
-  <button data-page="msg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10 14M21 3l-7 18-4-7-7-4z"/></svg>Message</button>
+<nav class="nav">
+  <button data-tab="home" class="on" aria-label="Accueil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg></button>
+  <button data-tab="clients" aria-label="Clients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M16 3.5a4 4 0 0 1 0 7.5M22 21a7 7 0 0 0-4-6.3"/></svg></button>
+  <button class="plus" id="plus" aria-label="Ajouter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button data-tab="activity" aria-label="Activité"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+  <button data-tab="msg" aria-label="Message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10 14M21 3l-7 18-4-7-7-4z"/></svg></button>
 </nav>
+
+<div class="sheet-bg" id="sheet-bg"></div>
+<div class="sheet" id="sheet">
+  <div class="grab"></div>
+  <button class="opt" data-go="devis"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span><span>Nouveau devis<small>Calcul automatique du prix</small></span></button>
+  <button class="opt" data-entry="profit"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span><span>Encaisser un profit<small>Vente hors devis, paiement reçu</small></span></button>
+  <button class="opt" data-entry="perte"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg></span><span>Ajouter une perte<small>Encre, vernis, matériau…</small></span></button>
+  <button class="opt" data-entry="ajuster"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span><span>Ajuster un paiement<small>Montant reçu différent du devis</small></span></button>
+  <button class="opt" data-go="msg"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10 14M21 3l-7 18-4-7-7-4z"/></svg></span><span>Message de paiement<small>Confirmation à transférer</small></span></button>
+</div>
 
 <div class="toast" id="toast"></div>
 
 <script>
 (() => {
   const tg = window.Telegram && window.Telegram.WebApp;
+  const $ = (id) => document.getElementById(id);
+  const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+
   if (tg) {
-    document.documentElement.setAttribute('data-tg', '');
     tg.ready();
     tg.expand();
+    const applyTheme = () => {
+      document.documentElement.dataset.theme = tg.colorScheme === 'dark' ? 'dark' : 'light';
+      const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg-top').trim();
+      try { tg.setHeaderColor(bg); tg.setBackgroundColor(bg); } catch {}
+    };
+    applyTheme();
+    tg.onEvent('themeChanged', applyTheme);
   }
 
-  const $ = (id) => document.getElementById(id);
+  // ─── helpers ─────────────────────────────────────────
   const num = (v) => parseFloat(String(v ?? '').replace(/\s/g, '').replace(',', '.'));
   const nf = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
-  const da = (v) => {
-    const n = num(v);
-    return Number.isFinite(n) ? nf.format(n) + ' DA' : '—';
+  const money = (v) => (Number.isFinite(num(v)) ? nf.format(num(v)) : '—');
+  const da = (v) => money(v) + ' DA';
+  const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  // "sami /cadre", "sami ecosol", "d&d/boites khalil" → "sami", "sami", "d&d"
+  const clientWord = (label) => {
+    const words = String(label || '').split('/')[0].trim().split(/\s+/);
+    // "profit imed" is how standalone profits were named → client "imed"
+    if (/^profit$/i.test(words[0]) && words[1]) return words[1];
+    return words[0] || String(label || '').trim();
   };
+  const clientKey = (label) => norm(clientWord(label));
+  const isUnpaid = (o) => o.paid === 'Non';
+  const orderAmount = (o) => num(o.profit) || 0;
 
-  let tariffs = {};
-  let selectedType = null;
-
-  const haptic = (kind) => tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred(kind);
+  const palette = ['#cfe8ff', '#ffe0d2', '#dff5c6', '#eadcff', '#fff0b3', '#cff3ea', '#ffd8e6'];
+  function avatar(name, cls = '') {
+    const el = document.createElement('div');
+    el.className = 'avatar ' + cls;
+    const word = clientWord(name) || '?';
+    let h = 0;
+    for (const ch of norm(word)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    el.style.background = palette[h % palette.length];
+    el.textContent = word.replace(/[^\p{L}\p{N}&]/gu, '').slice(0, 2) || '?';
+    return el;
+  }
+  const h = (tag, cls, text) => {
+    const el = document.createElement(tag);
+    if (cls) el.className = cls;
+    if (text != null) el.textContent = text;
+    return el;
+  };
+  const haptic = (k) => tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred(k);
+  const tick = () => tg && tg.HapticFeedback && tg.HapticFeedback.selectionChanged();
 
   let toastTimer;
   function toast(text, ok = true) {
@@ -235,249 +464,397 @@
     return json;
   }
 
-  async function withBusy(button, fn) {
-    const label = button.textContent;
+  async function busy(button, fn) {
+    const label = button.innerHTML;
     button.disabled = true;
     button.textContent = 'Patientez…';
-    try {
-      return await fn();
-    } finally {
-      button.disabled = false;
-      button.textContent = label;
+    try { return await fn(); } finally { button.disabled = false; button.innerHTML = label; }
+  }
+
+  // ─── data ────────────────────────────────────────────
+  let data = { balance: {}, orders: [], losses: [], tariffs: {} };
+  let clients = [];
+
+  function buildClients() {
+    const map = new Map();
+    for (const o of data.orders) {
+      const k = clientKey(o.client);
+      if (!k) continue;
+      if (!map.has(k)) map.set(k, { key: k, name: clientWord(o.client), orders: [], total: 0, credit: 0, lastRow: 0 });
+      const c = map.get(k);
+      c.orders.push(o);
+      c.total += orderAmount(o);
+      if (isUnpaid(o)) c.credit += orderAmount(o);
+      c.lastRow = Math.max(c.lastRow, o.row);
     }
+    clients = [...map.values()].sort((a, b) => b.credit - a.credit || b.lastRow - a.lastRow);
   }
 
-  // ─── Navigation ───────────────────────────────────────
-  document.querySelectorAll('.tabs button').forEach((b) =>
-    b.addEventListener('click', () => {
-      document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('on', x === b));
-      document.querySelectorAll('.page').forEach((p) => p.classList.toggle('on', p.id === 'p-' + b.dataset.page));
-      tg && tg.HapticFeedback && tg.HapticFeedback.selectionChanged();
-      window.scrollTo(0, 0);
-    })
-  );
-
-  // ─── Accueil ──────────────────────────────────────────
-  function row(title, sub, amount, cls) {
-    const r = document.createElement('div');
-    r.className = 'row';
-    const main = document.createElement('div');
-    main.className = 'main';
-    const t = document.createElement('div');
-    t.className = 'title';
-    t.textContent = title;
-    main.appendChild(t);
-    if (sub) {
-      const s = document.createElement('div');
-      s.className = 'sub';
-      s.textContent = sub;
-      main.appendChild(s);
-    }
-    const a = document.createElement('div');
-    a.className = 'amt' + (cls ? ' ' + cls : '');
-    a.textContent = amount;
-    r.append(main, a);
-    return r;
-  }
-
-  function fill(listId, rows) {
-    const el = $(listId);
-    el.replaceChildren(...(rows.length ? rows : [Object.assign(document.createElement('div'), { className: 'empty', textContent: 'Rien pour l’instant' })]));
-  }
-
-  async function loadSummary() {
+  async function load() {
     try {
-      const s = await api('summary');
-      $('net').textContent = da(s.balance.net);
-      $('net').className = 'big ' + (s.balance.net < 0 ? 'neg' : '');
-      $('profits').textContent = da(s.balance.profits);
-      $('losses').textContent = da(s.balance.losses);
-      fill('quotes', s.quotes.map((q) => row(q.client, `${q.width}×${q.height} cm · ×${q.qty} · ${q.type}`, da(q.total))));
-      fill('profit-list', s.profits.map((p) => row(p.client, p.adjusted ? 'Ajusté (devis ' + da(p.devis) + ')' : '', '+' + da(p.profit), 'pos')));
-      fill('loss-list', s.losses.map((l) => row(l.description || '—', '', '−' + da(l.amount), 'neg')));
-      if (Object.keys(tariffs).length === 0) {
-        tariffs = s.tariffs;
-        renderTypes();
-      }
+      data = await api('summary');
+      buildClients();
+      renderAll();
     } catch (err) {
       toast(err.message, false);
-      ['quotes', 'profit-list', 'loss-list'].forEach((id) =>
-        fill(id, [Object.assign(document.createElement('div'), { className: 'empty', textContent: err.message })])
-      );
+      $('home-list').replaceChildren(h('div', 'empty', err.message));
     }
   }
-  $('refresh').addEventListener('click', (e) => withBusy(e.currentTarget, loadSummary));
 
-  // ─── Devis ────────────────────────────────────────────
+  // ─── navigation ──────────────────────────────────────
+  const tabs = ['home', 'clients', 'activity', 'msg'];
+  let stack = ['home'];
+  function show(page) {
+    $$('.page').forEach((p) => p.classList.toggle('on', p.id === 'p-' + page));
+    const tab = [...stack].reverse().find((p) => tabs.includes(p));
+    $$('.nav [data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
+    if (tg && tg.BackButton) stack.length > 1 ? tg.BackButton.show() : tg.BackButton.hide();
+    window.scrollTo(0, 0);
+    if (page === 'activity') renderActivity();
+    if (page === 'clients') renderClients();
+  }
+  function go(page, { reset = false } = {}) {
+    if (reset) stack = [page];
+    else if (stack[stack.length - 1] !== page) stack.push(page);
+    show(page);
+  }
+  function back() {
+    if (stack.length > 1) stack.pop();
+    show(stack[stack.length - 1]);
+  }
+  if (tg && tg.BackButton) tg.BackButton.onClick(back);
+  $$('[data-back]').forEach((b) => b.addEventListener('click', back));
+  $$('.nav [data-tab]').forEach((b) => b.addEventListener('click', () => { tick(); go(b.dataset.tab, { reset: true }); }));
+
+  const sheet = $('sheet'), sheetBg = $('sheet-bg');
+  const openSheet = (open) => { sheet.classList.toggle('open', open); sheetBg.classList.toggle('open', open); };
+  $('plus').addEventListener('click', () => { tick(); openSheet(true); });
+  sheetBg.addEventListener('click', () => openSheet(false));
+
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-go],[data-entry]');
+    if (!t) return;
+    openSheet(false);
+    if (t.dataset.entry) { setKind(t.dataset.entry); go('entry'); return; }
+    if (t.dataset.filter) setChip('cl-filter', t.dataset.filter);
+    go(t.dataset.go);
+  });
+
+  // ─── rows ────────────────────────────────────────────
+  function orderRow(o, { onTap, togglable } = {}) {
+    const row = h(onTap ? 'button' : 'div', 'item');
+    const body = h('div', 'body');
+    body.append(h('div', 't', o.client.trim()));
+    const sub = h('div', 's');
+    const status = h(togglable ? 'button' : 'span', 'pill ' + (isUnpaid(o) ? 'unpaid' : 'paid') + (togglable ? ' big' : ''), isUnpaid(o) ? 'Non payé' : 'Payé');
+    sub.append(status);
+    if (o.adjusted) sub.append(h('span', '', 'ajusté · devis ' + money(o.devis)));
+    body.append(sub);
+    row.append(avatar(o.client), body, h('div', 'amt num ' + (isUnpaid(o) ? '' : 'pos'), (isUnpaid(o) ? '' : '+') + da(orderAmount(o))));
+    if (onTap) row.addEventListener('click', onTap);
+    if (togglable) status.addEventListener('click', (e) => { e.stopPropagation(); togglePaid(o, status); });
+    return row;
+  }
+  function lossRow(l) {
+    const row = h('div', 'item');
+    const ic = h('div', 'avatar');
+    ic.style.background = 'var(--red-soft)';
+    ic.style.color = 'var(--red)';
+    ic.textContent = '−';
+    const body = h('div', 'body');
+    body.append(h('div', 't', l.description || 'Perte'), h('div', 's', 'Perte'));
+    row.append(ic, body, h('div', 'amt num neg', '−' + da(l.amount)));
+    return row;
+  }
+  const fill = (el, rows, empty = 'Rien à afficher') => el.replaceChildren(...(rows.length ? rows : [h('div', 'empty', empty)]));
+  const openClient = (key) => () => { renderClient(key); go('client'); };
+
+  // ─── renders ─────────────────────────────────────────
+  function renderAll() {
+    const b = data.balance;
+    $('net').textContent = money(b.net);
+    $('net-sub').textContent = b.credit > 0 ? `dont ${da(b.credit)} à recevoir` : 'Aucun crédit en cours';
+    $('t-profits').textContent = money(b.profits);
+    $('t-losses').textContent = money(b.losses);
+    $('t-credit').textContent = money(b.credit);
+    const recent = [...data.orders].reverse().slice(0, 6);
+    fill($('home-list'), recent.map((o) => orderRow(o, { onTap: openClient(clientKey(o.client)) })), 'Aucune commande');
+    renderTypes();
+    renderPreview();
+    const page = stack[stack.length - 1];
+    if (page === 'activity') renderActivity();
+    if (page === 'clients') renderClients();
+    if (page === 'client' && currentClient) renderClient(currentClient);
+  }
+
+  function setChip(groupId, f) {
+    $$('#' + groupId + ' .chip').forEach((c) => c.classList.toggle('on', c.dataset.f === f));
+  }
+  ['act-filter', 'cl-filter'].forEach((g) =>
+    $$('#' + g + ' .chip').forEach((c) => c.addEventListener('click', () => {
+      tick();
+      setChip(g, c.dataset.f);
+      g === 'act-filter' ? renderActivity() : renderClients();
+    }))
+  );
+  $('act-q').addEventListener('input', () => renderActivity());
+  $('cl-q').addEventListener('input', () => renderClients());
+
+  function renderActivity() {
+    const f = $$('#act-filter .chip.on')[0].dataset.f;
+    const q = norm($('act-q').value);
+    const orders = [...data.orders].reverse().filter((o) => (!q || norm(o.client).includes(q)) && (f === 'all' || f === 'orders' || (f === 'unpaid' && isUnpaid(o))));
+    const losses = [...data.losses].reverse().filter((l) => (f === 'all' || f === 'losses') && (!q || norm(l.description).includes(q)));
+    const rows = [
+      ...(f === 'losses' ? [] : orders.map((o) => orderRow(o, { onTap: openClient(clientKey(o.client)) }))),
+      ...losses.map(lossRow),
+    ];
+    const total = (f === 'losses' ? 0 : orders.length) + losses.length;
+    $('act-count').textContent = total + (total > 1 ? ' résultats' : ' résultat');
+    fill($('act-list'), rows);
+  }
+
+  function renderClients() {
+    const f = $$('#cl-filter .chip.on')[0].dataset.f;
+    const q = norm($('cl-q').value);
+    const list = clients.filter((c) => (!q || c.key.includes(q)) && (f !== 'credit' || c.credit > 0));
+    $('cl-count').textContent = list.length + (list.length > 1 ? ' clients' : ' client');
+    fill($('cl-list'), list.map((c) => {
+      const row = h('button', 'item');
+      const body = h('div', 'body');
+      const unpaid = c.orders.filter(isUnpaid).length;
+      body.append(h('div', 't', c.name), h('div', 's', `${c.orders.length} commande${c.orders.length > 1 ? 's' : ''}` + (unpaid ? ` · ${unpaid} non payée${unpaid > 1 ? 's' : ''}` : '')));
+      row.append(avatar(c.name), body, c.credit > 0 ? h('div', 'amt num neg', da(c.credit)) : h('span', 'pill paid', 'À jour'));
+      row.addEventListener('click', openClient(c.key));
+      return row;
+    }), 'Aucun client trouvé');
+  }
+
+  let currentClient = null;
+  function renderClient(key) {
+    currentClient = key;
+    const c = clients.find((x) => x.key === key);
+    if (!c) return;
+    $('c-avatar').replaceWith(Object.assign(avatar(c.name, 'lg'), { id: 'c-avatar' }));
+    $('c-name').textContent = c.name;
+    const unpaid = c.orders.filter(isUnpaid);
+    $('c-sub').textContent = unpaid.length ? `${unpaid.length} commande${unpaid.length > 1 ? 's' : ''} non payée${unpaid.length > 1 ? 's' : ''}` : 'Tout est payé';
+    $('c-total').textContent = money(c.total);
+    $('c-paid').textContent = money(c.total - c.credit);
+    $('c-credit').textContent = money(c.credit);
+    $('c-payall').hidden = !unpaid.length;
+    $('c-payall').textContent = `Tout marquer payé · ${da(c.credit)}`;
+    fill($('c-orders'), [...c.orders].reverse().map((o) => orderRow(o, { togglable: true })));
+  }
+
+  async function setPaid(orders, paid) {
+    const rows = orders.map((o) => o.row);
+    const before = orders.map((o) => o.paid);
+    orders.forEach((o) => (o.paid = paid ? 'Oui' : 'Non'));
+    data.balance.credit = data.orders.filter(isUnpaid).reduce((s, o) => s + orderAmount(o), 0);
+    buildClients();
+    renderAll();
+    try {
+      await api('payer', { rows, paid });
+      toast(paid ? (orders.length > 1 ? `${orders.length} commandes marquées payées` : 'Marquée payée') : 'Marquée non payée');
+    } catch (err) {
+      orders.forEach((o, i) => (o.paid = before[i]));
+      toast(err.message, false);
+    }
+    load();
+  }
+  const togglePaid = (o) => setPaid([o], isUnpaid(o));
+  $('c-payall').addEventListener('click', () => {
+    const c = clients.find((x) => x.key === currentClient);
+    if (c) setPaid(c.orders.filter(isUnpaid), true);
+  });
+
+  // ─── search-as-you-type (select from existing) ───────
+  function suggest(input, source) {
+    const box = input.parentElement.querySelector('.suggest');
+    const close = () => box.classList.remove('open');
+    const open = () => {
+      const q = norm(input.value);
+      const items = source().filter((s) => !q || norm(s.label).includes(q)).slice(0, 6);
+      if (!items.length || (items.length === 1 && norm(items[0].label) === q)) return close();
+      box.replaceChildren(...items.map((s) => {
+        const b = h('button');
+        b.type = 'button';
+        b.append(avatar(s.label), h('span', '', s.label));
+        if (s.meta) b.append(h('span', 'meta num', s.meta));
+        b.addEventListener('pointerdown', (e) => { e.preventDefault(); input.value = s.label; close(); input.dispatchEvent(new Event('input')); tick(); });
+        return b;
+      }));
+      box.classList.add('open');
+    };
+    input.addEventListener('input', open);
+    input.addEventListener('focus', open);
+    input.addEventListener('blur', () => setTimeout(close, 120));
+  }
+  const clientOptions = () => clients.map((c) => ({ label: c.name, meta: c.credit > 0 ? da(c.credit) : '' }));
+  const orderOptions = () => [...new Map([...data.orders].reverse().map((o) => [norm(o.client), { label: o.client.trim(), meta: da(orderAmount(o)) }])).values()];
+  const lossOptions = () => [...new Map(data.losses.filter((l) => l.description).map((l) => [norm(l.description), { label: l.description }])).values()];
+
+  suggest($('d-client'), clientOptions);
+  suggest($('m-client'), clientOptions);
+  let entryKind = 'profit';
+  suggest($('e-name'), () => (entryKind === 'perte' ? lossOptions() : entryKind === 'ajuster' ? orderOptions() : clientOptions()));
+
+  // ─── devis ───────────────────────────────────────────
+  let selectedType = null;
   function renderTypes() {
     const wrap = $('d-types');
-    wrap.replaceChildren();
-    Object.entries(tariffs).forEach(([name, rate]) => {
-      const b = document.createElement('button');
+    wrap.replaceChildren(...Object.entries(data.tariffs || {}).map(([name, rate]) => {
+      const b = h('button', 'chip' + (name === selectedType ? ' on' : ''));
       b.type = 'button';
-      b.className = 'chip' + (name === selectedType ? ' on' : '');
-      b.append(name);
-      const small = document.createElement('small');
-      small.textContent = nf.format(rate) + '/m²';
-      b.appendChild(small);
-      b.addEventListener('click', () => {
-        selectedType = name;
-        renderTypes();
-        calc();
-        tg && tg.HapticFeedback && tg.HapticFeedback.selectionChanged();
-      });
-      wrap.appendChild(b);
-    });
+      b.append(name, h('small', 'num', money(rate) + '/m²'));
+      b.addEventListener('click', () => { selectedType = name; tick(); renderTypes(); calc(); });
+      return b;
+    }));
   }
-
   function calc() {
-    const w = num($('d-width').value), h = num($('d-height').value), q = parseInt($('d-qty').value, 10);
-    const rate = tariffs[selectedType];
-    const complete = $('d-complete').checked;
-    const material = complete ? num($('d-material').value) || 0 : 0;
-    if (!(w > 0 && h > 0)) {
-      $('c-surface').textContent = $('c-article').textContent = $('c-total').textContent = '—';
-      return;
-    }
-    const surface = (w * h) / 10000;
+    const w = num($('d-width').value), ht = num($('d-height').value), q = parseInt($('d-qty').value, 10);
+    const rate = (data.tariffs || {})[selectedType];
+    const material = $('d-complete').checked ? num($('d-material').value) || 0 : 0;
+    if (!(w > 0 && ht > 0)) { $('c-surface').textContent = $('c-article').textContent = $('c-sum').textContent = '—'; return; }
+    const surface = (w * ht) / 10000;
     $('c-surface').textContent = surface.toLocaleString('fr-FR', { maximumFractionDigits: 4 }) + ' m²';
-    if (!rate) {
-      $('c-article').textContent = $('c-total').textContent = 'Choisir un type';
-      return;
-    }
+    if (!rate) { $('c-article').textContent = $('c-sum').textContent = 'Choisir un type'; return; }
     const article = material + surface * rate;
     $('c-article').textContent = da(article);
-    $('c-total').textContent = q > 0 ? da(article * q) : '—';
+    $('c-sum').textContent = q > 0 ? da(article * q) : '—';
   }
-
   ['d-width', 'd-height', 'd-qty', 'd-material'].forEach((id) => $(id).addEventListener('input', calc));
-  $('d-complete').addEventListener('change', () => {
-    $('d-material-wrap').hidden = !$('d-complete').checked;
-    calc();
-  });
+  $$('[data-step]').forEach((b) => b.addEventListener('click', () => {
+    const v = Math.max(1, (parseInt($('d-qty').value, 10) || 0) + Number(b.dataset.step));
+    $('d-qty').value = v; tick(); calc();
+  }));
+  $('d-complete').addEventListener('change', () => { $('d-material-wrap').hidden = !$('d-complete').checked; calc(); });
 
   $('f-devis').addEventListener('submit', (e) => {
     e.preventDefault();
     if (!selectedType) return toast('Choisissez un type d’impression', false);
-    const btn = e.currentTarget.querySelector('button[type=submit]');
-    withBusy(btn, async () => {
+    const form = e.currentTarget;
+    busy(form.querySelector('.cta'), async () => {
       try {
         const q = await api('devis', {
-          client: $('d-client').value,
-          width: $('d-width').value,
-          height: $('d-height').value,
-          qty: $('d-qty').value,
-          type: selectedType,
-          complete: $('d-complete').checked,
-          material: $('d-material').value,
+          client: $('d-client').value, description: $('d-desc').value,
+          width: $('d-width').value, height: $('d-height').value, qty: $('d-qty').value,
+          type: selectedType, complete: $('d-complete').checked, material: $('d-material').value,
+          paid: $('d-paid').checked,
         });
-        toast('Devis enregistré : ' + da(q.total));
-        e.target.reset();
+        toast('Devis enregistré · ' + da(q.total));
+        form.reset();
         $('d-qty').value = '1';
         $('d-material-wrap').hidden = true;
         selectedType = null;
-        renderTypes();
-        calc();
-        loadSummary();
-      } catch (err) {
-        toast(err.message, false);
-      }
+        renderTypes(); calc();
+        await load();
+        back();
+      } catch (err) { toast(err.message, false); }
     });
   });
 
-  // ─── Saisie : profit / perte / ajuster ────────────────
-  const entryKinds = {
-    profit: { name: 'Client', amount: 'Montant (DA)', submit: 'Ajouter le profit', help: '', ok: 'Profit ajouté' },
-    perte: { name: 'Description', amount: 'Montant (DA)', submit: 'Ajouter la perte', help: 'Encre, vernis, matériau…', ok: 'Perte ajoutée' },
-    ajuster: { name: 'Client', amount: 'Montant reçu (DA)', submit: 'Ajuster le paiement', help: 'Remplace le montant du devis le plus récent de ce client.', ok: 'Paiement ajusté' },
+  // ─── saisie (pavé numérique) ─────────────────────────
+  const kinds = {
+    profit: { title: 'Encaisser', name: 'Client', help: 'Vente hors devis', ok: 'Profit ajouté' },
+    perte: { title: 'Perte', name: 'Description', help: 'Encre, vernis, matériau…', ok: 'Perte ajoutée' },
+    ajuster: { title: 'Ajuster', name: 'Commande', help: 'Montant réellement reçu pour cette commande', ok: 'Paiement ajusté' },
   };
-  let entryKind = 'profit';
-  function setKind(kind) {
-    entryKind = kind;
-    const k = entryKinds[kind];
-    document.querySelectorAll('#e-seg button').forEach((b) => b.classList.toggle('on', b.dataset.kind === kind));
-    $('e-name-label').textContent = k.name;
-    $('e-amount-label').textContent = k.amount;
-    $('e-submit').textContent = k.submit;
-    $('e-help').textContent = k.help;
+  let amount = '';
+  function setKind(k) {
+    entryKind = k;
+    $$('#e-seg button').forEach((b) => b.classList.toggle('on', b.dataset.kind === k));
+    $('e-title').textContent = kinds[k].title;
+    $('e-name-label').textContent = kinds[k].name;
+    $('e-name').placeholder = k === 'perte' ? 'ex : encre vernis' : k === 'ajuster' ? 'Rechercher une commande' : 'Rechercher un client';
+    $('e-help').textContent = kinds[k].help;
+    $('e-paid-wrap').hidden = k !== 'profit';
   }
-  document.querySelectorAll('#e-seg button').forEach((b) => b.addEventListener('click', () => setKind(b.dataset.kind)));
-
-  $('f-entry').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const name = $('e-name').value;
-    const amount = $('e-amount').value;
-    const payload = entryKind === 'perte' ? { description: name, amount } : { client: name, amount };
-    withBusy($('e-submit'), async () => {
+  $$('#e-seg button').forEach((b) => b.addEventListener('click', () => { tick(); setKind(b.dataset.kind); }));
+  function renderAmount() {
+    const [int, dec] = amount.split(',');
+    const shown = (int ? nf.format(Number(int)) : '0') + (dec !== undefined ? ',' + dec : '');
+    $('e-amount').textContent = shown + ' DA';
+  }
+  $('keypad').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    tick();
+    if (b.hasAttribute('data-del')) amount = amount.slice(0, -1);
+    else if (b.textContent === ',') { if (!amount.includes(',')) amount = (amount || '0') + ','; }
+    else if (amount.replace(',', '').length < 10 && !(amount.includes(',') && amount.split(',')[1].length >= 2)) amount = (amount === '0' ? '' : amount) + b.textContent;
+    renderAmount();
+  });
+  $('e-submit').addEventListener('click', (e) => {
+    const name = $('e-name').value.trim();
+    const value = amount.replace(',', '.');
+    if (!name) return toast(kinds[entryKind].name + ' requis', false);
+    if (!(num(value) > 0)) return toast('Entrez un montant', false);
+    const payload = entryKind === 'perte' ? { description: name, amount: value }
+      : entryKind === 'ajuster' ? { client: name, amount: value }
+      : { client: name, amount: value, paid: $('e-paid').checked };
+    busy(e.currentTarget, async () => {
       try {
         await api(entryKind, payload);
-        toast(entryKinds[entryKind].ok + ' : ' + da(amount));
-        e.target.reset();
-        loadSummary();
-      } catch (err) {
-        toast(err.message, false);
-      }
+        toast(kinds[entryKind].ok + ' · ' + da(value));
+        amount = ''; renderAmount(); $('e-name').value = '';
+        await load();
+        back();
+      } catch (err) { toast(err.message, false); }
     });
   });
 
-  // ─── Message client ───────────────────────────────────
+  // ─── message ─────────────────────────────────────────
   function paymentMessage() {
     const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
     const line = '━'.repeat(22);
-    return (
-      `${line}\n  CONFIRMATION DE PAIEMENT\n${line}\n\n` +
+    return `${line}\n  CONFIRMATION DE PAIEMENT\n${line}\n\n` +
       `Destinataire : ${$('m-client').value.trim() || '…'}\n` +
       `Montant : ${da($('m-amount').value)}\n` +
       `Ref : ${$('m-ref').value.trim() || '…'}\n` +
       `Date : ${date}\n\n` +
-      `Merci de confirmer la reception.\n${line}`
-    );
+      `Merci de confirmer la reception.\n${line}`;
   }
   const renderPreview = () => ($('m-preview').textContent = paymentMessage());
   ['m-client', 'm-amount', 'm-ref'].forEach((id) => $(id).addEventListener('input', renderPreview));
-  renderPreview();
-
   const msgValid = () => {
     if ($('f-msg').reportValidity() && num($('m-amount').value) > 0) return true;
     toast('Remplissez destinataire, montant et référence', false);
     return false;
   };
-
   $('m-send').addEventListener('click', (e) => {
     if (!msgValid()) return;
-    withBusy(e.currentTarget, async () => {
+    busy(e.currentTarget, async () => {
       try {
         await api('envoyer', { client: $('m-client').value, amount: $('m-amount').value, reference: $('m-ref').value });
         toast('Envoyé dans le chat');
         setTimeout(() => tg && tg.close(), 700);
-      } catch (err) {
-        toast(err.message, false);
-      }
+      } catch (err) { toast(err.message, false); }
     });
   });
-
   $('m-copy').addEventListener('click', async () => {
     if (!msgValid()) return;
     const text = paymentMessage();
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
+    try { await navigator.clipboard.writeText(text); }
+    catch {
       const ta = document.createElement('textarea');
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      ta.remove();
+      ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
     }
     toast('Message copié');
   });
 
-  // ─── Start ────────────────────────────────────────────
+  // ─── start ───────────────────────────────────────────
   if (!tg || !tg.initData) {
     document.body.innerHTML = '<div class="notice">Ouvrez cette page depuis le bot Telegram.</div>';
     return;
   }
-  loadSummary();
+  const first = tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name;
+  if (first) { $('me-name').textContent = first; $('me-avatar').textContent = first.slice(0, 2); }
+  $('refresh').addEventListener('click', () => { tick(); load(); });
+  setKind('profit');
+  renderPreview();
+  load();
 })();
 </script>
 </body>
