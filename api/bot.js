@@ -162,7 +162,6 @@ bot.command('devis', async (ctx) => {
   }
 });
 
-
 // ─── Tarifs ──────────────────────────────────────────────
 
 bot.command('tarifs', (ctx) => {
@@ -198,7 +197,6 @@ bot.command('profit', async (ctx) => {
     fail(ctx, 'profit', err);
   }
 });
-
 
 // ─── Perte ───────────────────────────────────────────────
 
@@ -240,7 +238,6 @@ bot.command('loss', (ctx) => {
   ctx.message.text = newText;
   return bot.handleUpdate({ message: ctx.message });
 });
-
 
 // ─── Ajuster ─────────────────────────────────────────────
 
@@ -296,7 +293,6 @@ bot.command('send', (ctx) => {
   ctx.message.text = ctx.message.text.replace(/^\/send/, '/envoyer');
   return bot.handleUpdate({ message: ctx.message });
 });
-
 
 // ─── P&L ─────────────────────────────────────────────────
 
