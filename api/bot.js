@@ -19,27 +19,34 @@ function fail(ctx, label, err) {
 
 // ─── Main Menu ───────────────────────────────────────────
 
+const WEBAPP_URL = process.env.WEBAPP_URL || 'https://telegram-stock-vercel.vercel.app/';
+
+const homeText = 'UV Printing\n\nOuvrez l\'app pour tout gerer, ou utilisez le bouton "App" a cote du champ de message.';
+
 const menu = Markup.inlineKeyboard([
+  [Markup.button.webApp('Ouvrir l\'app', WEBAPP_URL)],
   [Markup.button.callback('Solde', 'bal'), Markup.button.callback('P&L', 'pl')],
-  [Markup.button.callback('+ Devis', 'hint_devis'), Markup.button.callback('+ Profit', 'hint_profit')],
-  [Markup.button.callback('+ Perte', 'hint_loss'), Markup.button.callback('Envoyer msg', 'hint_send')],
   [Markup.button.callback('Derniers devis', 'list'), Markup.button.callback('Aide', 'help')],
 ]);
 
-bot.start((ctx) => {
-  ctx.reply(
-    'Gestion UV Printing\n\n' +
-      'Commandes rapides :\n' +
-      '/solde - Solde net\n' +
-      '/devis - Nouveau devis\n' +
-      '/profit - Ajouter profit\n' +
-      '/perte - Ajouter perte\n' +
-      '/envoyer - Message client\n' +
-      '/pl - Bilan P&L\n' +
-      '/liste - Derniers devis\n' +
-      '/aide - Aide',
-    menu
-  );
+const back = Markup.inlineKeyboard([[Markup.button.callback('« Menu', 'home')]]);
+
+bot.start(async (ctx) => {
+  await ctx.deleteMessage().catch(() => {});
+  if (isOwner(ctx)) {
+    await ctx.telegram
+      .setChatMenuButton({
+        chatId: ctx.chat.id,
+        menuButton: { type: 'web_app', text: 'App', web_app: { url: WEBAPP_URL } },
+      })
+      .catch((err) => console.error('menu button:', err.message));
+  }
+  return ctx.reply(homeText, menu);
+});
+
+bot.action('home', async (ctx) => {
+  await ctx.answerCbQuery();
+  return ctx.editMessageText(homeText, menu).catch(() => {});
 });
 
 // ─── Help ────────────────────────────────────────────────
@@ -69,7 +76,7 @@ bot.command('aide', (ctx) => ctx.reply(helpText));
 bot.command('help', (ctx) => ctx.reply(helpText));
 bot.action('help', async (ctx) => {
   await ctx.answerCbQuery();
-  ctx.reply(helpText);
+  return ctx.editMessageText(helpText, back).catch(() => {});
 });
 
 // ─── Balance / Solde ─────────────────────────────────────
@@ -85,7 +92,7 @@ async function sendBalance(ctx, edit) {
       `Pertes :   ${sheets.fmtDA(b.losses)}\n` +
       `${'─'.repeat(22)}\n` +
       `Net :      ${sheets.fmtDA(b.net)}`;
-    return edit ? ctx.editMessageText(text) : ctx.reply(text);
+    return edit ? ctx.editMessageText(text, back) : ctx.reply(text);
   } catch (err) {
     fail(ctx, 'balance', err);
   }
@@ -155,14 +162,6 @@ bot.command('devis', async (ctx) => {
   }
 });
 
-bot.action('hint_devis', async (ctx) => {
-  await ctx.answerCbQuery();
-  ctx.reply(
-    '/devis <client> <larg> <haut> <qte> <type>\n' +
-      'Types : w, wv, wcv, eco, ecod\n' +
-      'Ex: /devis sami 23 10 53 wcv'
-  );
-});
 
 // ─── Tarifs ──────────────────────────────────────────────
 
@@ -200,10 +199,6 @@ bot.command('profit', async (ctx) => {
   }
 });
 
-bot.action('hint_profit', async (ctx) => {
-  await ctx.answerCbQuery();
-  ctx.reply('/profit <client> <montant>\nEx: /profit imed 4000');
-});
 
 // ─── Perte ───────────────────────────────────────────────
 
@@ -246,10 +241,6 @@ bot.command('loss', (ctx) => {
   return bot.handleUpdate({ message: ctx.message });
 });
 
-bot.action('hint_loss', async (ctx) => {
-  await ctx.answerCbQuery();
-  ctx.reply('/perte <description> <montant>\nEx: /perte "encre vernis" 13400');
-});
 
 // ─── Ajuster ─────────────────────────────────────────────
 
@@ -297,24 +288,8 @@ bot.command('envoyer', async (ctx) => {
   if (isNaN(amount) || amount <= 0) return ctx.reply('Montant invalide.');
   const reference = parts.slice(2).join(' ');
 
-  const date = new Date().toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-
   await ctx.reply('Transférez le message suivant :');
-  await ctx.reply(
-    `━━━━━━━━━━━━━━━━━━━━━━\n` +
-      `  CONFIRMATION DE PAIEMENT\n` +
-      `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-      `Destinataire : ${client}\n` +
-      `Montant : ${sheets.fmtDA(amount)}\n` +
-      `Ref : ${reference}\n` +
-      `Date : ${date}\n\n` +
-      `Merci de confirmer la reception.\n` +
-      `━━━━━━━━━━━━━━━━━━━━━━`
-  );
+  await ctx.reply(sheets.paymentMessage(client, amount, reference));
 });
 
 bot.command('send', (ctx) => {
@@ -322,10 +297,6 @@ bot.command('send', (ctx) => {
   return bot.handleUpdate({ message: ctx.message });
 });
 
-bot.action('hint_send', async (ctx) => {
-  await ctx.answerCbQuery();
-  ctx.reply('/envoyer <client> <montant> <ref>\nEx: /envoyer Ahmed 18550 Impression UV');
-});
 
 // ─── P&L ─────────────────────────────────────────────────
 
@@ -360,7 +331,7 @@ async function sendPL(ctx, edit) {
       }
     }
 
-    return edit ? ctx.editMessageText(text) : ctx.reply(text);
+    return edit ? ctx.editMessageText(text, back) : ctx.reply(text);
   } catch (err) {
     fail(ctx, 'pl', err);
   }
@@ -380,13 +351,13 @@ async function sendList(ctx, limit, edit) {
     const quotes = await sheets.getQuotes(limit || 10);
     if (!quotes.length) {
       const text = 'Aucun devis.';
-      return edit ? ctx.editMessageText(text) : ctx.reply(text);
+      return edit ? ctx.editMessageText(text, back) : ctx.reply(text);
     }
     let text = `Derniers ${quotes.length} devis\n` + '─'.repeat(24) + '\n';
     for (const q of quotes) {
       text += `${q.client} | ${q.width}x${q.height} x${q.qty} | ${q.type} | ${q.total} DA\n`;
     }
-    return edit ? ctx.editMessageText(text) : ctx.reply(text);
+    return edit ? ctx.editMessageText(text, back) : ctx.reply(text);
   } catch (err) {
     fail(ctx, 'list', err);
   }

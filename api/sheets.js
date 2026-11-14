@@ -57,6 +57,19 @@ function fmtDA(n) {
   return Number(n).toLocaleString('fr-DZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' DA';
 }
 
+function paymentMessage(client, amount, reference) {
+  const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  const line = '━'.repeat(22);
+  return (
+    `${line}\n  CONFIRMATION DE PAIEMENT\n${line}\n\n` +
+    `Destinataire : ${client}\n` +
+    `Montant : ${fmtDA(amount)}\n` +
+    `Ref : ${reference}\n` +
+    `Date : ${date}\n\n` +
+    `Merci de confirmer la reception.\n${line}`
+  );
+}
+
 async function nextRow(sheet, col) {
   const res = await callScript('get', { sheet, range: `${col}1:${col}` });
   return (res.values || []).length + 1;
@@ -215,6 +228,7 @@ async function getPLDetails() {
 module.exports = {
   resolvePrintType,
   fmtDA,
+  paymentMessage,
   addQuote,
   getQuotes,
   addProfit,
