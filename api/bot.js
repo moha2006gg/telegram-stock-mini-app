@@ -12,6 +12,11 @@ function isOwner(ctx) {
   return ctx.from && ctx.from.id === OWNER_ID;
 }
 
+function fail(ctx, label, err) {
+  console.error(`${label}:`, err.message);
+  return ctx.reply(`Erreur (${label}) : ${err.message}`);
+}
+
 // ─── Main Menu ───────────────────────────────────────────
 
 const menu = Markup.inlineKeyboard([
@@ -82,8 +87,7 @@ async function sendBalance(ctx, edit) {
       `Net :      ${sheets.fmtDA(b.net)}`;
     return edit ? ctx.editMessageText(text) : ctx.reply(text);
   } catch (err) {
-    console.error('balance:', err.message);
-    ctx.reply('Erreur. Verifiez la config Google Sheets.');
+    fail(ctx, 'balance', err);
   }
 }
 
@@ -147,8 +151,7 @@ bot.command('devis', async (ctx) => {
         `Total : ${sheets.fmtDA(q.total)}`
     );
   } catch (err) {
-    console.error('devis:', err.message);
-    ctx.reply('Erreur ajout devis.');
+    fail(ctx, 'devis', err);
   }
 });
 
@@ -193,8 +196,7 @@ bot.command('profit', async (ctx) => {
         `Solde net : ${sheets.fmtDA(b.net)}`
     );
   } catch (err) {
-    console.error('profit:', err.message);
-    ctx.reply('Erreur ajout profit.');
+    fail(ctx, 'profit', err);
   }
 });
 
@@ -234,8 +236,7 @@ bot.command('perte', async (ctx) => {
         `Solde net : ${sheets.fmtDA(b.net)}`
     );
   } catch (err) {
-    console.error('perte:', err.message);
-    ctx.reply('Erreur ajout perte.');
+    fail(ctx, 'perte', err);
   }
 });
 
@@ -271,8 +272,7 @@ bot.command('ajuster', async (ctx) => {
         `Ajuste : ${sheets.fmtDA(r.adjusted)}`
     );
   } catch (err) {
-    console.error('ajuster:', err.message);
-    ctx.reply('Erreur ajustement.');
+    fail(ctx, 'ajuster', err);
   }
 });
 bot.command('adjust', (ctx) => {
@@ -362,8 +362,7 @@ async function sendPL(ctx, edit) {
 
     return edit ? ctx.editMessageText(text) : ctx.reply(text);
   } catch (err) {
-    console.error('pl:', err.message);
-    ctx.reply('Erreur P&L.');
+    fail(ctx, 'pl', err);
   }
 }
 
@@ -389,8 +388,7 @@ async function sendList(ctx, limit, edit) {
     }
     return edit ? ctx.editMessageText(text) : ctx.reply(text);
   } catch (err) {
-    console.error('list:', err.message);
-    ctx.reply('Erreur liste.');
+    fail(ctx, 'list', err);
   }
 }
 
@@ -412,10 +410,10 @@ bot.action('list', async (ctx) => {
 module.exports = async (req, res) => {
   try {
     if (req.method !== 'POST') return res.status(200).send('ok');
-    await bot.handleUpdate(req.body, res);
+    await bot.handleUpdate(req.body);
     return res.status(200).send('ok');
   } catch (err) {
     console.error('Bot error', err);
-    return res.status(500).send('error');
+    if (!res.headersSent) res.status(500).send('error');
   }
 };

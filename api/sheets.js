@@ -22,28 +22,26 @@ const TYPE_ALIASES = {
 
 async function callScript(action, params) {
   if (!APPS_SCRIPT_URL) throw new Error('APPS_SCRIPT_URL not configured');
-  const body = JSON.stringify({ secret: APPS_SCRIPT_SECRET, action, ...params });
-  let url = APPS_SCRIPT_URL;
-
-  for (let i = 0; i < 5; i++) {
-    const res = await fetch(url, {
+  // Apps Script runs doPost on the POST, then 302-redirects to the result, which must be fetched with GET (fetch's default).
+  let res;
+  try {
+    res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body,
-      redirect: 'manual',
+      body: JSON.stringify({ secret: APPS_SCRIPT_SECRET, action, ...params }),
     });
-
-    if (res.status >= 300 && res.status < 400) {
-      url = res.headers.get('location');
-      continue;
-    }
-
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    return data;
+  } catch (err) {
+    throw new Error(`Apps Script injoignable: ${err.cause?.message || err.message}`);
   }
-
-  throw new Error('Too many redirects from Apps Script');
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(`Apps Script HTTP ${res.status}: ${text.slice(0, 120)}`);
+  }
+  if (data.error) throw new Error(data.error);
+  return data;
 }
 
 function resolvePrintType(input) {
