@@ -34,6 +34,15 @@
     --shadow: 0 8px 28px rgba(30, 58, 138, 0.10);
     --shadow-blue: 0 14px 34px rgba(37, 99, 235, 0.35);
     --radius: 22px;
+    --glow-btn: rgba(37, 99, 235, 0.3);
+    --hero-glow: rgba(125, 211, 252, 0.45);
+    --hero-shadow: 0 2px 14px rgba(8, 20, 70, .25);
+    --glass-bg: rgba(255, 255, 255, 0.14);
+    --glass-bg-active: rgba(255, 255, 255, 0.26);
+    --glass-border: rgba(255, 255, 255, 0.22);
+    --sum-pos: #bbf7d0;
+    --sum-neg: #fecdd3;
+    --sum-line: rgba(255, 255, 255, 0.25);
   }
   :root[data-theme="dark"] {
     --bg-top: #0b1533;
@@ -56,6 +65,54 @@
     --shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
     --shadow-blue: 0 14px 34px rgba(37, 99, 235, 0.3);
   }
+
+  /* Yellow palette: same layout, lime/yellow gradients with dark text on them. */
+  :root[data-accent="lime"] {
+    --bg-top: #e2f3e6;
+    --bg-bottom: #f5f9f2;
+    --glow-1: rgba(238, 243, 106, 0.55);
+    --glow-2: rgba(52, 211, 153, 0.20);
+    --ink: #0f1713;
+    --muted: #6d7c74;
+    --line: rgba(15, 23, 19, 0.08);
+    --accent: #4d7c0f;
+    --accent-soft: #eef7c8;
+    --grad: linear-gradient(135deg, #fbfb9a 0%, #eef36a 42%, #b8e86a 100%);
+    --grad-btn: linear-gradient(135deg, #f4f77a 0%, #e2ef5c 50%, #b5e46a 100%);
+    --grad-dark: linear-gradient(145deg, #0f1713 0%, #26361f 100%);
+    --on-grad: #10170f;
+    --credit-ink: #eef36a;
+    --shadow: 0 8px 28px rgba(31, 80, 55, 0.10);
+    --shadow-blue: 0 14px 34px rgba(170, 180, 30, 0.35);
+    --glow-btn: rgba(160, 175, 20, 0.35);
+    --hero-glow: rgba(255, 255, 255, 0.55);
+    --hero-shadow: none;
+    --glass-bg: rgba(255, 255, 255, 0.5);
+    --glass-bg-active: rgba(255, 255, 255, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.6);
+    --sum-pos: #166534;
+    --sum-neg: #b91c1c;
+    --sum-line: rgba(0, 0, 0, 0.12);
+  }
+  :root[data-theme="dark"][data-accent="lime"] {
+    --bg-top: #0e1b15;
+    --bg-bottom: #0a100d;
+    --glow-1: rgba(238, 243, 106, 0.12);
+    --glow-2: rgba(52, 211, 153, 0.12);
+    --card: #17221c;
+    --card-soft: rgba(30, 44, 36, 0.72);
+    --nav-bg: rgba(23, 34, 28, 0.85);
+    --ink: #eef5f0;
+    --muted: #8fa198;
+    --line: rgba(255, 255, 255, 0.07);
+    --accent: #e2ef5c;
+    --accent-soft: rgba(238, 243, 106, 0.14);
+    --grad-dark: linear-gradient(145deg, #050806 0%, #1d2c20 100%);
+    --shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+    --shadow-blue: 0 14px 34px rgba(170, 180, 30, 0.22);
+    --glow-btn: rgba(170, 180, 30, 0.25);
+  }
+  .swatch { width: 18px; height: 18px; border-radius: 50%; background: var(--grad); box-shadow: 0 0 0 2px var(--card), 0 2px 8px var(--glow-btn); }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   [hidden] { display: none !important; }
   html { background: var(--bg-bottom); }
@@ -96,17 +153,17 @@
   }
   .hero::before, .hero::after { content: ""; position: absolute; border-radius: 50%; z-index: -1; pointer-events: none; }
   .hero::before { width: 220px; height: 220px; right: -70px; top: -90px; background: radial-gradient(circle, rgba(255,255,255,.28), transparent 65%); }
-  .hero::after { width: 260px; height: 160px; left: -80px; bottom: -70px; background: radial-gradient(circle, rgba(125,211,252,.45), transparent 65%); }
+  .hero::after { width: 260px; height: 160px; left: -80px; bottom: -70px; background: radial-gradient(circle, var(--hero-glow), transparent 65%); }
   .hero .cap { font-size: 12px; font-weight: 700; letter-spacing: .08em; opacity: .8; }
-  .hero .big { font-size: 40px; font-weight: 800; letter-spacing: -.02em; margin: 2px 0 2px; text-shadow: 0 2px 14px rgba(8, 20, 70, .25); }
+  .hero .big { font-size: 40px; font-weight: 800; letter-spacing: -.02em; margin: 2px 0 2px; text-shadow: var(--hero-shadow); }
   .hero .sub { font-size: 13px; font-weight: 600; opacity: .85; }
   .hero .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 18px; }
   .hero .actions button {
-    border: 1px solid rgba(255, 255, 255, 0.22); background: rgba(255, 255, 255, 0.14); border-radius: 16px; padding: 10px 2px 8px;
+    border: 1px solid var(--glass-border); background: var(--glass-bg); border-radius: 16px; padding: 10px 2px 8px;
     display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--on-grad);
     -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   }
-  .hero .actions button:active { background: rgba(255, 255, 255, 0.26); }
+  .hero .actions button:active { background: var(--glass-bg-active); }
   .hero .actions svg { width: 20px; height: 20px; }
 
   .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
@@ -156,7 +213,7 @@
     padding: 8px 14px; font-size: 13.5px; font-weight: 700;
   }
   .chip small { color: var(--muted); font-weight: 600; margin-left: 4px; }
-  .chip.on { background: var(--grad-btn); color: var(--on-grad); border-color: transparent; box-shadow: 0 6px 16px rgba(37, 99, 235, .3); }
+  .chip.on { background: var(--grad-btn); color: var(--on-grad); border-color: transparent; box-shadow: 0 6px 16px var(--glow-btn); }
   .chip.on small { color: inherit; opacity: .7; }
   .wrap-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 
@@ -180,12 +237,12 @@
   .switch input:checked { background: var(--grad-btn); }
   .switch input:checked::after { left: 21px; }
   .sum { position: relative; overflow: hidden; background: var(--grad); color: var(--on-grad); border-radius: 18px; padding: 14px 16px; margin-top: 16px; box-shadow: var(--shadow-blue); }
-  .sum .pos { color: #bbf7d0; } .sum .neg { color: #fecdd3; }
+  .sum .pos { color: var(--sum-pos); } .sum .neg { color: var(--sum-neg); }
   .sum .l { display: flex; justify-content: space-between; font-weight: 600; font-size: 14px; padding: 2px 0; }
-  .sum .l.total { font-size: 20px; font-weight: 800; border-top: 1px solid rgba(255,255,255,.25); margin-top: 6px; padding-top: 8px; }
+  .sum .l.total { font-size: 20px; font-weight: 800; border-top: 1px solid var(--sum-line); margin-top: 6px; padding-top: 8px; }
   .cta {
     display: block; width: 100%; margin-top: 16px; border: 0; border-radius: 999px; padding: 16px;
-    font-weight: 800; background: var(--grad-btn); color: var(--on-grad); box-shadow: 0 10px 24px rgba(37, 99, 235, .32);
+    font-weight: 800; background: var(--grad-btn); color: var(--on-grad); box-shadow: 0 10px 24px var(--glow-btn);
   }
   .cta:active { transform: scale(.985); }
   .cta.ghost { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
@@ -204,7 +261,7 @@
   /* ── keypad ── */
   .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--card-soft); border-radius: 999px; padding: 4px; box-shadow: var(--shadow); }
   .seg button { border: 0; background: none; border-radius: 999px; padding: 10px 4px; font-weight: 700; font-size: 14px; }
-  .seg button.on { background: var(--grad-btn); color: var(--on-grad); box-shadow: 0 6px 16px rgba(37, 99, 235, .3); }
+  .seg button.on { background: var(--grad-btn); color: var(--on-grad); box-shadow: 0 6px 16px var(--glow-btn); }
   .amount { text-align: center; margin: 22px 0 4px; }
   .amount .v { font-size: 44px; font-weight: 800; letter-spacing: -.02em; }
   .amount .h { font-size: 13px; color: var(--muted); font-weight: 600; min-height: 18px; }
@@ -241,7 +298,7 @@
   .nav button { border: 0; background: none; width: 52px; height: 48px; border-radius: 999px; display: grid; place-items: center; color: var(--muted); }
   .nav button svg { width: 23px; height: 23px; }
   .nav button.on { color: var(--accent); background: var(--accent-soft); }
-  .nav button.plus { background: var(--grad-btn); color: var(--on-grad); width: 56px; height: 56px; margin: -8px 4px; box-shadow: 0 10px 24px rgba(37, 99, 235, .45); }
+  .nav button.plus { background: var(--grad-btn); color: var(--on-grad); width: 56px; height: 56px; margin: -8px 4px; box-shadow: 0 10px 24px var(--glow-btn); }
 
   .page { display: none; } .page.on { display: block; animation: in .18s ease-out; }
   @keyframes in { from { opacity: 0; transform: translateY(6px); } }
@@ -256,7 +313,7 @@
   .sheet.open { transform: none; visibility: visible; transition: transform .25s ease; }
   .sheet .grab { width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 14px; }
   .sheet .opt { display: flex; align-items: center; gap: 14px; width: 100%; border: 0; background: var(--card); border-radius: 18px; padding: 14px; margin-bottom: 8px; text-align: left; font-weight: 700; box-shadow: var(--shadow); }
-  .sheet .opt .ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--grad-btn); color: var(--on-grad); box-shadow: 0 6px 14px rgba(37, 99, 235, .3); }
+  .sheet .opt .ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--grad-btn); color: var(--on-grad); box-shadow: 0 6px 14px var(--glow-btn); }
   .sheet .opt .ic svg { width: 20px; height: 20px; }
   .lab-row { display: flex; justify-content: space-between; align-items: baseline; }
   .seg.seg2 { grid-template-columns: 1fr 1fr; }
@@ -291,8 +348,9 @@
 <!-- ═══ Accueil ═══ -->
 <section class="page on" id="p-home">
   <div class="head">
-    <div class="avatar" id="me-avatar" style="background:var(--grad-btn);color:#fff">UV</div>
+    <div class="avatar" id="me-avatar" style="background:var(--grad-btn);color:var(--on-grad)">UV</div>
     <div class="who"><div class="hello">Bonjour,</div><div class="name" id="me-name">UV Printing</div></div>
+    <button class="round" id="accent" aria-label="Changer la couleur"><span class="swatch"></span></button>
     <button class="round" id="theme" aria-label="Changer le thème"></button>
     <button class="round" id="refresh" aria-label="Actualiser"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5"/></svg></button>
   </div>
@@ -549,6 +607,18 @@
     try { tg.setHeaderColor(bg); tg.setBackgroundColor(bg); } catch {}
   }
   applyTheme(getTheme());
+  // Colour palette (blue or yellow), also remembered on this device.
+  function applyAccent(accent) {
+    document.documentElement.dataset.accent = accent;
+    applyTheme(document.documentElement.dataset.theme);
+  }
+  try { applyAccent(localStorage.getItem('accent') === 'lime' ? 'lime' : 'blue'); } catch { applyAccent('blue'); }
+  $('accent').addEventListener('click', () => {
+    const next = document.documentElement.dataset.accent === 'lime' ? 'blue' : 'lime';
+    try { localStorage.setItem('accent', next); } catch {}
+    applyAccent(next);
+    tg && tg.HapticFeedback && tg.HapticFeedback.selectionChanged();
+  });
   $('theme').addEventListener('click', () => {
     const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
     try { localStorage.setItem('theme', next); } catch {}
@@ -1047,7 +1117,7 @@
       const row = h('button', 'item');
       const ic = h('div', 'avatar');
       ic.style.background = 'var(--grad-btn)';
-      ic.style.color = '#fff';
+      ic.style.color = 'var(--on-grad)';
       ic.textContent = m.name.replace(/[^\p{L}\p{N}]/gu, '').slice(0, 2) || 'M';
       const body = h('div', 'body');
       body.append(h('div', 't', m.name), h('div', 's', `${money(m.width)} × ${money(m.height)} cm · ${da(perM2(m))} / m²`));
