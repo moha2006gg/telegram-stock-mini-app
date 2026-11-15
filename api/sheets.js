@@ -24,15 +24,22 @@ const TYPE_ALIASES = {
 async function callScript(action, params) {
   if (!APPS_SCRIPT_URL) throw new Error('APPS_SCRIPT_URL not configured');
   // Apps Script runs doPost on the POST, then 302-redirects to the result, which must be fetched with GET (fetch's default).
+  // Connections to Google occasionally drop (e.g. TLS reset), so network failures are retried.
+  // Safe for writes too: every update targets a fixed range, so sending it twice writes the same cells.
   let res;
-  try {
-    res = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ secret: APPS_SCRIPT_SECRET, action, ...params }),
-    });
-  } catch (err) {
-    throw new Error(`Apps Script injoignable: ${err.cause?.message || err.message}`);
+  for (let attempt = 1; ; attempt++) {
+    try {
+      res = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: APPS_SCRIPT_SECRET, action, ...params }),
+      });
+      break;
+    } catch (err) {
+      if (attempt >= 3) throw new Error(`Apps Script injoignable: ${err.cause?.message || err.message}`);
+      console.warn(`Apps Script attempt ${attempt} failed: ${err.cause?.message || err.message}`);
+      await new Promise((r) => setTimeout(r, 400 * attempt));
+    }
   }
   const text = await res.text();
   let data;
