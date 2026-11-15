@@ -227,6 +227,17 @@
   .sheet .opt { display: flex; align-items: center; gap: 14px; width: 100%; border: 0; background: var(--card); border-radius: 18px; padding: 14px; margin-bottom: 8px; text-align: left; font-weight: 700; box-shadow: var(--shadow); }
   .sheet .opt .ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--lime); color: var(--lime-ink); }
   .sheet .opt .ic svg { width: 20px; height: 20px; }
+  .lab-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .seg.seg2 { grid-template-columns: 1fr 1fr; }
+  .mat-info { margin-top: 10px; background: var(--bg-bottom); border: 1px dashed var(--line); border-radius: 12px; padding: 9px 12px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .sheet { max-height: 92vh; overflow-y: auto; }
+  .trow { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .trow:last-child { border-bottom: 0; }
+  .trow .body { flex: 1; min-width: 0; }
+  .trow .t { font-weight: 800; }
+  .trow .s { font-size: 12.5px; color: var(--muted); }
+  .trow input { width: 110px; text-align: right; font-weight: 800; }
+  .trow input.changed { border-color: var(--green); background: var(--green-soft); }
   .ed-title { margin: 0 2px 4px; font-size: 18px; font-weight: 800; }
   .ed-sub { margin: 0 2px; color: var(--muted); font-size: 13px; font-weight: 600; }
   .amt.edit { border: 0; background: var(--bg-bottom); border-radius: 12px; padding: 6px 10px; display: flex; align-items: center; gap: 6px; }
@@ -328,24 +339,54 @@
     </div>
     <label class="f" for="d-qty">Quantité</label>
     <div class="stepper"><button type="button" data-step="-1">−</button><input id="d-qty" class="num" inputmode="numeric" value="1"><button type="button" data-step="1">+</button></div>
-    <label class="f">Type d'impression</label>
+    <div class="lab-row"><label class="f">Type d'impression</label><button type="button" class="link" data-go="tarifs">Modifier les prix</button></div>
     <div class="wrap-chips" id="d-types"></div>
     <label class="switch"><span>Produit complet (avec matériau)</span><input type="checkbox" id="d-complete"></label>
-    <div id="d-material-wrap" hidden><label class="f" for="d-material">Coût matériau par article (DA)</label><input class="input num" id="d-material" inputmode="decimal"></div>
+    <div id="d-material-wrap" hidden>
+      <div class="lab-row"><label class="f">Matériau</label><button type="button" class="link" data-go="materiaux">Gérer les matériaux</button></div>
+      <div class="wrap-chips" id="d-mats"></div>
+      <div class="mat-info" id="d-mat-info" hidden></div>
+      <label class="f" for="d-material">Coût matériau par article (DA)</label>
+      <input class="input num" id="d-material" inputmode="decimal">
+    </div>
+    <label class="f">Facturation</label>
+    <div class="seg seg2" id="d-mode"><button type="button" data-mode="m2" class="on">Au m²</button><button type="button" data-mode="piece">À la pièce</button></div>
+    <div id="d-unit-wrap" hidden><label class="f" for="d-unit">Prix par pièce (DA)</label><input class="input num" id="d-unit" inputmode="decimal" placeholder="ex : 350"></div>
     <label class="switch"><span>Déjà payé</span><input type="checkbox" id="d-paid"></label>
     <div class="sum">
-      <div class="l"><span>Surface</span><span class="num" id="c-surface">—</span></div>
-      <div class="l"><span>Prix par article</span><span class="num" id="c-article">—</span></div>
-      <div class="l total"><span>Total</span><span class="num" id="c-sum">—</span></div>
+      <div class="l"><span>Surface / article</span><span class="num" id="c-surface">—</span></div>
+      <div class="l"><span>Impression / article</span><span class="num" id="c-print">—</span></div>
+      <div class="l" id="c-mat-line" hidden><span>Matériau / article</span><span class="num" id="c-mat">—</span></div>
+      <div class="l"><span id="c-article-label">Prix par article</span><span class="num" id="c-article">—</span></div>
+      <div class="l" id="c-ref-line" hidden><span>Calcul au m² (total)</span><span class="num" id="c-ref">—</span></div>
+      <div class="l" id="c-piece-line" hidden><span>Prix à la pièce</span><span class="num" id="c-piece">—</span></div>
+      <div class="l total"><span id="c-sum-label">Total</span><span class="num" id="c-sum">—</span></div>
+      <div class="l" id="c-gap-line" hidden><span>Écart vs calcul au m²</span><span class="num" id="c-gap">—</span></div>
     </div>
-    <label class="f" for="d-price">Prix final convenu (optionnel)</label>
-    <input class="input num" id="d-price" inputmode="decimal" placeholder="Vide = prix calculé">
-    <div class="ed-sub" style="margin-top:6px">Si rempli, ce montant est utilisé pour le crédit et les messages.</div>
+    <div id="d-price-wrap">
+      <label class="f" for="d-price">Prix final convenu (optionnel)</label>
+      <input class="input num" id="d-price" inputmode="decimal" placeholder="Vide = prix calculé">
+      <div class="ed-sub" style="margin-top:6px">Si rempli, ce montant est utilisé pour le crédit et les messages.</div>
+    </div>
     <button class="cta" type="submit">Enregistrer le devis</button>
   </form>
 </section>
 
 <!-- ═══ Saisie (pavé) ═══ -->
+<section class="page" id="p-materiaux">
+  <div class="title-bar"><button class="round" data-back aria-label="Retour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><h1>Matériaux · plaques</h1><span class="spacer"></span></div>
+  <div class="list" id="mat-list"></div>
+  <p class="ed-sub" style="margin:12px 6px 0">Le coût par pièce est calculé d'après le nombre de pièces qui tiennent sur une plaque. Tout est enregistré dans l'onglet « Matériaux » du Google Sheet.</p>
+  <button class="cta" id="mat-add">Ajouter un matériau</button>
+</section>
+
+<section class="page" id="p-tarifs">
+  <div class="title-bar"><button class="round" data-back aria-label="Retour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><h1>Tarifs · DA / m²</h1><span class="spacer"></span></div>
+  <div class="list" id="t-list"></div>
+  <p class="ed-sub" style="margin:12px 6px 0">Les nouveaux prix servent aux prochains devis. Les devis déjà enregistrés gardent leur prix actuel.</p>
+  <button class="cta" id="t-save" disabled>Enregistrer les tarifs</button>
+</section>
+
 <section class="page" id="p-entry">
   <div class="title-bar"><button class="round" data-back aria-label="Retour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><h1 id="e-title">Encaisser</h1><span class="spacer"></span></div>
   <div class="seg" id="e-seg">
@@ -415,6 +456,8 @@
   <button class="opt" data-entry="profit"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span><span>Encaisser un profit<small>Vente hors devis, paiement reçu</small></span></button>
   <button class="opt" data-entry="perte"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg></span><span>Ajouter une dépense<small>Encre, vernis, matériau…</small></span></button>
   <button class="opt" data-entry="ajuster"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span><span>Ajuster un paiement<small>Montant reçu différent du devis</small></span></button>
+  <button class="opt" data-go="materiaux"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5z"/><path d="m3 12 9 5 9-5M3 17l9 5 9-5"/></svg></span><span>Matériaux<small>Prix des plaques, coût par pièce</small></span></button>
+  <button class="opt" data-go="tarifs"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></span><span>Tarifs<small>Modifier vos prix au m²</small></span></button>
   <button class="opt" data-go="msg"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10 14M21 3l-7 18-4-7-7-4z"/></svg></span><span>Message client<small>Relevé des impayés ou confirmation</small></span></button>
 </div>
 
@@ -426,6 +469,22 @@
   <input class="input num" id="ed-amount" inputmode="decimal">
   <button class="cta" id="ed-save">Enregistrer</button>
   <button class="cta ghost" id="ed-reset">Revenir au prix du devis</button>
+</div>
+
+<div class="sheet" id="mat-sheet">
+  <div class="grab"></div>
+  <h3 class="ed-title" id="ms-title">Nouveau matériau</h3>
+  <label class="f" for="ms-name">Nom</label>
+  <input class="input" id="ms-name" placeholder="ex : Plexiglas 3 mm">
+  <div class="grid2">
+    <div><label class="f" for="ms-w">Largeur plaque (cm)</label><input class="input num" id="ms-w" inputmode="decimal"></div>
+    <div><label class="f" for="ms-h">Hauteur plaque (cm)</label><input class="input num" id="ms-h" inputmode="decimal"></div>
+  </div>
+  <label class="f" for="ms-price">Prix de la plaque (DA)</label>
+  <input class="input num" id="ms-price" inputmode="decimal">
+  <div class="ed-sub" id="ms-m2" style="margin-top:6px"></div>
+  <button class="cta" id="ms-save">Enregistrer</button>
+  <button class="cta ghost" id="ms-del">Supprimer</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -529,7 +588,7 @@
   }
 
   // ─── data ────────────────────────────────────────────
-  let data = { balance: {}, orders: [], losses: [], tariffs: {} };
+  let data = { balance: {}, orders: [], losses: [], tariffs: [], materials: [] };
   let clients = [];
 
   function buildClients() {
@@ -569,6 +628,8 @@
     window.scrollTo(0, 0);
     if (page === 'activity') renderActivity();
     if (page === 'clients') renderClients();
+    if (page === 'tarifs') renderTarifs();
+    if (page === 'materiaux') renderMaterials();
   }
   function go(page, { reset = false } = {}) {
     if (reset) stack = [page];
@@ -646,12 +707,16 @@
     const recent = [...data.orders].reverse().slice(0, 6);
     fill($('home-list'), recent.map((o) => orderRow(o, { onTap: openClient(clientKey(o.client)) })), 'Aucune commande');
     renderTypes();
+    if (selectedMat !== null && !(data.materials || []).some((m) => m.row === selectedMat)) selectedMat = null;
+    renderMats();
+    calc();
     msgClientKey = null;
     renderMsgForm();
     const page = stack[stack.length - 1];
     if (page === 'activity') renderActivity();
     if (page === 'clients') renderClients();
     if (page === 'client' && currentClient) renderClient(currentClient);
+    if (page === 'materiaux') renderMaterials();
   }
 
   function setChip(groupId, f) {
@@ -801,7 +866,7 @@
   let selectedType = null;
   function renderTypes() {
     const wrap = $('d-types');
-    wrap.replaceChildren(...Object.entries(data.tariffs || {}).map(([name, rate]) => {
+    wrap.replaceChildren(...data.tariffs.map(({ code: name, rate }) => {
       const b = h('button', 'chip' + (name === selectedType ? ' on' : ''));
       b.type = 'button';
       b.append(name, h('small', 'num', money(rate) + '/m²'));
@@ -809,47 +874,245 @@
       return b;
     }));
   }
+  let selectedMat = null;
+  let devisMode = 'm2';
+  function renderMats() {
+    const opts = [...(data.materials || []).map((m) => ({ key: m.row, label: m.name, meta: da(m.price) })), { key: null, label: 'Saisie manuelle' }];
+    $('d-mats').replaceChildren(...opts.map((o) => {
+      const b = h('button', 'chip' + (o.key === selectedMat ? ' on' : ''));
+      b.type = 'button';
+      b.append(o.label);
+      if (o.meta) b.append(h('small', 'num', o.meta));
+      b.addEventListener('click', () => { selectedMat = o.key; tick(); renderMats(); calc(); });
+      return b;
+    }));
+  }
+  // Pieces per plaque in the better of the two orientations; cost per piece = plaque price / pieces.
+  function materialCalc(w, ht, q) {
+    const m = (data.materials || []).find((x) => x.row === selectedMat);
+    if (!m) return null;
+    if (!(w > 0 && ht > 0)) return { m, error: 'Entrez les dimensions de la pièce' };
+    const fit = Math.max(
+      Math.floor(m.width / w) * Math.floor(m.height / ht),
+      Math.floor(m.width / ht) * Math.floor(m.height / w)
+    );
+    if (!fit) return { m, error: `La pièce est plus grande que la plaque (${money(m.width)} × ${money(m.height)} cm)` };
+    const sheetsNeeded = q > 0 ? Math.ceil(q / fit) : 0;
+    return { m, fit, perPiece: m.price / fit, sheetsNeeded, spend: sheetsNeeded * m.price };
+  }
+  const vis = (id, on) => ($(id).hidden = !on);
+  const dash = (...ids) => ids.forEach((id) => ($(id).textContent = '—'));
+  let lastMaterialCalc = null;
   function calc() {
     const w = num($('d-width').value), ht = num($('d-height').value), q = parseInt($('d-qty').value, 10);
-    const rate = (data.tariffs || {})[selectedType];
-    const material = $('d-complete').checked ? num($('d-material').value) || 0 : 0;
-    if (!(w > 0 && ht > 0)) { $('c-surface').textContent = $('c-article').textContent = $('c-sum').textContent = '—'; return; }
+    const rate = (data.tariffs.find((t) => t.code === selectedType) || {}).rate;
+    const complete = $('d-complete').checked;
+    const piece = devisMode === 'piece';
+
+    const mc = complete ? materialCalc(w, ht, q) : null;
+    lastMaterialCalc = mc;
+    $('d-material').readOnly = Boolean(mc);
+    vis('d-mat-info', Boolean(mc));
+    if (mc && mc.error) {
+      $('d-mat-info').textContent = mc.error;
+      $('d-material').value = '';
+    } else if (mc) {
+      $('d-material').value = String(Math.round(mc.perPiece * 100) / 100).replace('.', ',');
+      $('d-mat-info').textContent = `${mc.fit} pièce${mc.fit > 1 ? 's' : ''} par plaque · ${da(mc.perPiece)} / pièce` +
+        (mc.sheetsNeeded ? ` · ${mc.sheetsNeeded} plaque${mc.sheetsNeeded > 1 ? 's' : ''} à utiliser (${da(mc.spend)})` : '');
+    }
+    const material = complete ? num($('d-material').value) || 0 : 0;
+
+    vis('d-unit-wrap', piece); vis('d-price-wrap', !piece);
+    vis('c-ref-line', piece); vis('c-piece-line', piece); vis('c-gap-line', piece);
+    vis('c-mat-line', complete);
+    $('c-article-label').textContent = piece ? 'Coût calculé / article' : 'Prix par article';
+    $('c-sum-label').textContent = piece ? 'Total facturé' : 'Total';
+
+    if (!(w > 0 && ht > 0)) return dash('c-surface', 'c-print', 'c-mat', 'c-article', 'c-ref', 'c-piece', 'c-sum', 'c-gap');
     const surface = (w * ht) / 10000;
     $('c-surface').textContent = surface.toLocaleString('fr-FR', { maximumFractionDigits: 4 }) + ' m²';
-    if (!rate) { $('c-article').textContent = $('c-sum').textContent = 'Choisir un type'; return; }
-    const article = material + surface * rate;
+    $('c-mat').textContent = da(material);
+    if (!rate) {
+      dash('c-print', 'c-ref', 'c-piece', 'c-gap');
+      $('c-article').textContent = $('c-sum').textContent = 'Choisir un type';
+      return;
+    }
+    const print = surface * rate;
+    const article = material + print;
+    const m2Total = q > 0 ? article * q : 0;
+    $('c-print').textContent = da(print);
     $('c-article').textContent = da(article);
-    $('c-sum').textContent = q > 0 ? da(article * q) : '—';
+    if (!piece) {
+      $('c-sum').textContent = q > 0 ? da(m2Total) : '—';
+      return;
+    }
+    const unit = num($('d-unit').value);
+    $('c-ref').textContent = q > 0 ? da(m2Total) : '—';
+    if (!(unit > 0) || !(q > 0)) {
+      dash('c-piece', 'c-gap');
+      $('c-sum').textContent = 'Prix par pièce ?';
+      return;
+    }
+    const billed = unit * q;
+    const gap = billed - m2Total;
+    $('c-piece').textContent = `${da(unit)} × ${q}`;
+    $('c-sum').textContent = da(billed);
+    $('c-gap').textContent = (gap >= 0 ? '+' : '−') + da(Math.abs(gap));
+    $('c-gap').className = 'num ' + (gap >= 0 ? 'pos' : 'neg');
   }
-  ['d-width', 'd-height', 'd-qty', 'd-material'].forEach((id) => $(id).addEventListener('input', calc));
+  ['d-width', 'd-height', 'd-qty', 'd-material', 'd-unit'].forEach((id) => $(id).addEventListener('input', calc));
   $$('[data-step]').forEach((b) => b.addEventListener('click', () => {
     const v = Math.max(1, (parseInt($('d-qty').value, 10) || 0) + Number(b.dataset.step));
     $('d-qty').value = v; tick(); calc();
   }));
-  $('d-complete').addEventListener('change', () => { $('d-material-wrap').hidden = !$('d-complete').checked; calc(); });
+  $('d-complete').addEventListener('change', () => { $('d-material-wrap').hidden = !$('d-complete').checked; renderMats(); calc(); });
+  $$('#d-mode button').forEach((b) => b.addEventListener('click', () => {
+    devisMode = b.dataset.mode;
+    $$('#d-mode button').forEach((x) => x.classList.toggle('on', x === b));
+    tick();
+    calc();
+  }));
 
   $('f-devis').addEventListener('submit', (e) => {
     e.preventDefault();
     if (!selectedType) return toast('Choisissez un type d’impression', false);
+    const piece = devisMode === 'piece';
+    if (piece && !(num($('d-unit').value) > 0)) return toast('Entrez le prix par pièce', false);
+    if (lastMaterialCalc && lastMaterialCalc.error) return toast(lastMaterialCalc.error, false);
+    const complete = $('d-complete').checked;
     const form = e.currentTarget;
     busy(form.querySelector('.cta'), async () => {
       try {
         const q = await api('devis', {
           client: $('d-client').value, description: $('d-desc').value,
           width: $('d-width').value, height: $('d-height').value, qty: $('d-qty').value,
-          type: selectedType, complete: $('d-complete').checked, material: $('d-material').value,
-          paid: $('d-paid').checked, price: $('d-price').value.trim(),
+          type: selectedType, complete, material: complete ? $('d-material').value : '',
+          paid: $('d-paid').checked,
+          price: piece ? '' : $('d-price').value.trim(),
+          unitPrice: piece ? $('d-unit').value.trim() : '',
         });
         toast('Devis enregistré · ' + da(q.finalPrice ?? q.total));
         form.reset();
         $('d-qty').value = '1';
         $('d-material-wrap').hidden = true;
         selectedType = null;
-        renderTypes(); calc();
+        selectedMat = null;
+        renderTypes(); renderMats(); calc();
         await load();
         back();
       } catch (err) { toast(err.message, false); }
     });
+  });
+
+  // ─── matériaux ───────────────────────────────────────
+  let editingMat = null;
+  const perM2 = (m) => m.price / ((m.width * m.height) / 10000);
+  function renderMaterials() {
+    fill($('mat-list'), (data.materials || []).map((m) => {
+      const row = h('button', 'item');
+      const ic = h('div', 'avatar');
+      ic.style.background = 'var(--lime)';
+      ic.textContent = m.name.replace(/[^\p{L}\p{N}]/gu, '').slice(0, 2) || 'M';
+      const body = h('div', 'body');
+      body.append(h('div', 't', m.name), h('div', 's', `${money(m.width)} × ${money(m.height)} cm · ${da(perM2(m))} / m²`));
+      row.append(ic, body, h('div', 'amt num', da(m.price)));
+      row.addEventListener('click', () => openMat(m));
+      return row;
+    }), 'Aucun matériau · ajoutez vos plaques');
+  }
+  function matPreview() {
+    const w = num($('ms-w').value), ht = num($('ms-h').value), p = num($('ms-price').value);
+    $('ms-m2').textContent = w > 0 && ht > 0 && p > 0 ? `Soit ${da(perM2({ width: w, height: ht, price: p }))} le m²` : '';
+  }
+  function openMat(m) {
+    editingMat = m || null;
+    $('ms-title').textContent = m ? m.name : 'Nouveau matériau';
+    $('ms-name').value = m ? m.name : '';
+    $('ms-w').value = m ? String(m.width).replace('.', ',') : '';
+    $('ms-h').value = m ? String(m.height).replace('.', ',') : '';
+    $('ms-price').value = m ? String(m.price).replace('.', ',') : '';
+    $('ms-del').hidden = !m;
+    matPreview();
+    tick();
+    openSheet(true, $('mat-sheet'));
+  }
+  ['ms-w', 'ms-h', 'ms-price'].forEach((id) => $(id).addEventListener('input', matPreview));
+  $('mat-add').addEventListener('click', () => openMat(null));
+  $('ms-save').addEventListener('click', (e) => {
+    const payload = {
+      row: editingMat ? editingMat.row : undefined,
+      name: $('ms-name').value.trim(),
+      width: $('ms-w').value, height: $('ms-h').value, price: $('ms-price').value,
+    };
+    if (!payload.name) return toast('Nom du matériau requis', false);
+    if (!(num(payload.width) > 0 && num(payload.height) > 0 && num(payload.price) > 0)) return toast('Dimensions et prix de la plaque requis', false);
+    busy(e.currentTarget, async () => {
+      try {
+        await api('materiau', payload);
+        openSheet(false);
+        toast('Matériau enregistré · ' + payload.name);
+        await load();
+      } catch (err) { toast(err.message, false); }
+    });
+  });
+  $('ms-del').addEventListener('click', (e) => {
+    const m = editingMat;
+    if (!m) return;
+    const button = e.currentTarget;
+    const run = () => busy(button, async () => {
+      try {
+        await api('materiau', { row: m.row, delete: true });
+        if (selectedMat === m.row) selectedMat = null;
+        openSheet(false);
+        toast('Matériau supprimé · ' + m.name);
+        await load();
+      } catch (err) { toast(err.message, false); }
+    });
+    if (tg && tg.showConfirm) tg.showConfirm(`Supprimer « ${m.name} » ?`, (ok) => ok && run());
+    else if (confirm(`Supprimer « ${m.name} » ?`)) run();
+  });
+
+  // ─── tarifs ──────────────────────────────────────────
+  const priceText = (n) => String(n).replace('.', ',');
+  function tarifInputs() {
+    return $$('#t-list input').map((input) => ({ input, t: data.tariffs.find((x) => x.code === input.dataset.code) }));
+  }
+  function refreshTarifSave() {
+    const changed = tarifInputs().filter(({ input, t }) => num(input.value) !== t.rate);
+    tarifInputs().forEach(({ input, t }) => input.classList.toggle('changed', num(input.value) !== t.rate));
+    $('t-save').disabled = !changed.length;
+    $('t-save').textContent = changed.length ? `Enregistrer (${changed.length} prix modifié${changed.length > 1 ? 's' : ''})` : 'Enregistrer les tarifs';
+  }
+  function renderTarifs() {
+    fill($('t-list'), data.tariffs.map((t) => {
+      const row = h('label', 'trow');
+      const body = h('div', 'body');
+      body.append(h('div', 't', t.code), h('div', 's', t.label));
+      const input = h('input', 'input num');
+      input.inputMode = 'decimal';
+      input.dataset.code = t.code;
+      input.value = priceText(t.rate);
+      input.addEventListener('input', refreshTarifSave);
+      row.append(body, input);
+      return row;
+    }), 'Chargement…');
+    refreshTarifSave();
+  }
+  $('t-save').addEventListener('click', (e) => {
+    const rates = {};
+    for (const { input, t } of tarifInputs()) {
+      const v = num(input.value);
+      if (!(v > 0)) return toast(`Prix invalide pour ${t.code}`, false);
+      if (v !== t.rate) rates[t.code] = v;
+    }
+    busy(e.currentTarget, async () => {
+      try {
+        const r = await api('tarifs', { rates });
+        toast(`${r.changed} prix mis à jour` + (r.pinned ? ` · ${r.pinned} devis gardent leur ancien prix` : ''));
+        await load();
+      } catch (err) { toast(err.message, false); }
+    }).then(renderTarifs);
   });
 
   // ─── saisie (pavé numérique) ─────────────────────────

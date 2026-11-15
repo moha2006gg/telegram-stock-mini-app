@@ -40,24 +40,66 @@ const str = (v) => String(v ?? '').trim();
 
 const actions = {
   async summary() {
-    const [balance, pl] = await Promise.all([sheets.getBalance(), sheets.getPLDetails()]);
-    return { balance, orders: pl.profitRows, losses: pl.lossRows, tariffs: sheets.TARIFFS };
+    const [balance, pl, tariffs, materials] = await Promise.all([
+      sheets.getBalance(),
+      sheets.getPLDetails(),
+      sheets.getTariffs(),
+      sheets.getMaterials(),
+    ]);
+    return { balance, orders: pl.profitRows, losses: pl.lossRows, tariffs, materials };
+  },
+
+  async materiau(b) {
+    if (b.delete) {
+      const r = await sheets.deleteMaterial(b.row);
+      if (!r) throw bad('Matériau introuvable');
+      return r;
+    }
+    const name = str(b.name);
+    const width = num(b.width);
+    const height = num(b.height);
+    const price = num(b.price);
+    if (!name) throw bad('Nom du matériau requis');
+    if (!(width > 0) || !(height > 0)) throw bad('Dimensions de la plaque invalides');
+    if (!(price > 0)) throw bad('Prix de la plaque invalide');
+    const r = await sheets.saveMaterial({ row: b.row, name, width, height, price });
+    if (!r) throw bad('Plus de place dans l\'onglet Matériaux');
+    return r;
+  },
+
+  async tarifs(b) {
+    const rates = b.rates && typeof b.rates === 'object' ? b.rates : {};
+    const updates = {};
+    for (const [code, value] of Object.entries(rates)) {
+      const rate = num(value);
+      if (!(rate > 0) || rate > 10000000) throw bad(`Prix invalide pour ${code}`);
+      updates[code] = Math.round(rate * 100) / 100;
+    }
+    return sheets.setTariffs(updates);
   },
 
   async devis(b) {
-    const description = str(b.description);
-    const client = description ? `${str(b.client)} / ${description}` : str(b.client);
     const width = num(b.width);
     const height = num(b.height);
     const qty = parseInt(b.qty, 10);
-    const type = sheets.resolvePrintType(str(b.type));
+    const type = sheets.resolvePrintType(str(b.type), await sheets.getTariffs());
     const complete = Boolean(b.complete);
     const material = complete ? num(b.material) || 0 : 0;
     if (!str(b.client)) throw bad('Client requis');
     if (!(width > 0) || !(height > 0) || !(qty > 0)) throw bad('Dimensions et quantite invalides');
     if (!type) throw bad('Type inconnu');
-    const price = str(b.price) ? num(b.price) : null;
+
+    // Per-piece billing keeps the m² quote in the Devis sheet as the cost reference and bills unit × qty.
+    const unit = str(b.unitPrice) ? num(b.unitPrice) : null;
+    if (unit !== null && !(unit > 0)) throw bad('Prix par pièce invalide');
+    let price = str(b.price) ? num(b.price) : null;
     if (price !== null && !(price > 0)) throw bad('Prix final invalide');
+    if (unit !== null) price = Math.round(unit * qty * 100) / 100;
+
+    const detail = [str(b.description), unit !== null ? `${qty} × ${String(unit).replace('.', ',')} DA` : '']
+      .filter(Boolean)
+      .join(' · ');
+    const client = detail ? `${str(b.client)} / ${detail}` : str(b.client);
     return sheets.addQuote(client, width, height, qty, type, complete, material, Boolean(b.paid), price);
   },
 

@@ -129,14 +129,6 @@ bot.command('devis', async (ctx) => {
 
   if (isNaN(width) || isNaN(height) || isNaN(qty)) return ctx.reply('Dimensions et quantite doivent etre des nombres.');
 
-  const printType = sheets.resolvePrintType(typeInput);
-  if (!printType) {
-    return ctx.reply(
-      `Type inconnu : ${typeInput}\n` +
-        'Types valides : w, wv, wcv, eco, ecod'
-    );
-  }
-
   let isComplete = false;
   let materialCost = 0;
   if (parts[5] && parts[5].toLowerCase() === 'oui') {
@@ -145,6 +137,13 @@ bot.command('devis', async (ctx) => {
   }
 
   try {
+    const printType = sheets.resolvePrintType(typeInput, await sheets.getTariffs());
+    if (!printType) {
+      return ctx.reply(
+        `Type inconnu : ${typeInput}\n` +
+          'Types valides : w, wv, wcv, eco, ecod'
+      );
+    }
     const q = await sheets.addQuote(client, width, height, qty, printType, isComplete, materialCost);
     ctx.reply(
       `Devis ajoute\n` +
@@ -165,14 +164,18 @@ bot.command('devis', async (ctx) => {
 
 // ─── Tarifs ──────────────────────────────────────────────
 
-bot.command('tarifs', (ctx) => {
-  let text = 'Tarifs DA/m2\n' + '─'.repeat(22) + '\n';
-  for (const [code, rate] of Object.entries(sheets.TARIFFS)) {
-    text += `${code} : ${sheets.fmtDA(rate)}\n`;
+bot.command('tarifs', async (ctx) => {
+  try {
+    let text = 'Tarifs DA/m2\n' + '─'.repeat(22) + '\n';
+    for (const t of await sheets.getTariffs()) {
+      text += `${t.code} : ${sheets.fmtDA(t.rate)}\n`;
+    }
+    text += '─'.repeat(22) + '\n';
+    text += 'Raccourcis : w, wv, wcv, eco, ecod\nModifier les prix : app → + → Tarifs';
+    ctx.reply(text);
+  } catch (err) {
+    fail(ctx, 'tarifs', err);
   }
-  text += '─'.repeat(22) + '\n';
-  text += 'Raccourcis : w, wv, wcv, eco, ecod';
-  ctx.reply(text);
 });
 
 // ─── Profit ──────────────────────────────────────────────

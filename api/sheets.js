@@ -9,13 +9,9 @@ const paidCell = (paid) => (paid ? 'Oui' : 'Non');
 const isUnpaid = (v) => /^non$/i.test(String(v || '').trim());
 const parseNum = (v) => parseFloat((v || '').toString().replace(/\s/g, '').replace(',', '.')) || 0;
 
-const TARIFFS = {
-  'W':                    3000,
-  'W-V':                  6000,
-  'W-C-V':                9000,
-  'ecosolvent simple':    2000,
-  'ecosolvent + decoupe': 3000,
-};
+// Price table on the Devis UV tab: code (M), description (N), DA/m² (O), from row 5 down to the first blank code.
+const TARIFF_FIRST_ROW = 5;
+const DEVIS_FIRST_ROW = 4;
 
 const TYPE_ALIASES = {
   'w':    'W',
@@ -49,13 +45,84 @@ async function callScript(action, params) {
   return data;
 }
 
-function resolvePrintType(input) {
-  const lower = input.toLowerCase().trim();
-  if (TYPE_ALIASES[lower]) return TYPE_ALIASES[lower];
-  for (const key of Object.keys(TARIFFS)) {
-    if (key.toLowerCase() === lower) return key;
+async function getTariffs() {
+  const range = `M${TARIFF_FIRST_ROW}:O${TARIFF_FIRST_ROW + 19}`;
+  const rows = (await callScript('get', { sheet: DEVIS_SHEET, range })).values || [];
+  const tariffs = [];
+  for (const [i, r] of rows.entries()) {
+    const code = String(r[0] || '').trim();
+    if (!code) break;
+    tariffs.push({ row: TARIFF_FIRST_ROW + i, code, label: String(r[1] || '').trim(), rate: parseNum(r[2]) });
   }
-  return null;
+  return tariffs;
+}
+
+// Existing quotes look their price up from the table, so they are pinned at today's price before the table changes.
+async function setTariffs(updates) {
+  const tariffs = await getTariffs();
+  const changed = tariffs.filter((t) => Object.hasOwn(updates, t.code) && updates[t.code] !== t.rate);
+  if (!changed.length) return { changed: 0, pinned: 0 };
+
+  const codes = new Set(changed.map((t) => t.code.toLowerCase()));
+  const quotes = (await callScript('get', { sheet: DEVIS_SHEET, range: `A${DEVIS_FIRST_ROW}:I` })).values || [];
+  const pins = [];
+  quotes.forEach((r, i) => {
+    const isQuote = String(r[0] || '').trim() && codes.has(String(r[4] || '').trim().toLowerCase());
+    if (isQuote && String(r[8] || '').trim() !== '') pins.push({ row: DEVIS_FIRST_ROW + i, rate: parseNum(r[8]) });
+  });
+  await Promise.all(pins.map((p) => callScript('update', { sheet: DEVIS_SHEET, range: `I${p.row}:I${p.row}`, values: [[p.rate]] })));
+
+  const first = tariffs[0].row;
+  const last = tariffs[tariffs.length - 1].row;
+  await callScript('update', {
+    sheet: DEVIS_SHEET,
+    range: `O${first}:O${last}`,
+    values: tariffs.map((t) => [Object.hasOwn(updates, t.code) ? updates[t.code] : t.rate]),
+  });
+  return { changed: changed.length, pinned: pins.length };
+}
+
+// ─── Matériaux (plaques) ─────────────────────────────────
+const MAT_SHEET = 'Matériaux';
+const MAT_FIRST_ROW = 4;
+const MAT_LAST_ROW = 60;
+
+async function getMaterials() {
+  let rows;
+  try {
+    rows = (await callScript('get', { sheet: MAT_SHEET, range: `A${MAT_FIRST_ROW}:D${MAT_LAST_ROW}` })).values || [];
+  } catch (err) {
+    if (/sheet not found/i.test(err.message)) return [];
+    throw err;
+  }
+  return rows
+    .map((r, i) => ({ row: MAT_FIRST_ROW + i, name: String(r[0] || '').trim(), width: parseNum(r[1]), height: parseNum(r[2]), price: parseNum(r[3]) }))
+    .filter((m) => m.name);
+}
+
+async function saveMaterial({ row, name, width, height, price }) {
+  let target = Number(row) || 0;
+  if (!target) {
+    const names = (await callScript('get', { sheet: MAT_SHEET, range: `A${MAT_FIRST_ROW}:A${MAT_LAST_ROW}` })).values || [];
+    const free = names.findIndex((r) => !String(r[0] || '').trim());
+    target = MAT_FIRST_ROW + (free === -1 ? names.length : free);
+  }
+  if (!Number.isInteger(target) || target < MAT_FIRST_ROW || target > MAT_LAST_ROW) return null;
+  await callScript('update', { sheet: MAT_SHEET, range: `A${target}:D${target}`, values: [[name, width, height, price]] });
+  return { row: target, name, width, height, price };
+}
+
+async function deleteMaterial(row) {
+  const r = Number(row);
+  if (!Number.isInteger(r) || r < MAT_FIRST_ROW || r > MAT_LAST_ROW) return null;
+  await callScript('update', { sheet: MAT_SHEET, range: `A${r}:D${r}`, values: [['', '', '', '']] });
+  return { row: r };
+}
+
+function resolvePrintType(input, tariffs) {
+  const lower = String(input || '').toLowerCase().trim();
+  const code = (TYPE_ALIASES[lower] || lower).toLowerCase();
+  return tariffs.find((t) => t.code.toLowerCase() === code) || null;
 }
 
 function fmtDA(n) {
@@ -82,8 +149,9 @@ async function nextRow(sheet, col) {
 
 // ─── Devis UV ────────────────────────────────────────────
 
-async function addQuote(client, widthCm, heightCm, qty, printType, isComplete, materialCost, paid = false, finalPrice = null) {
-  const tariff = TARIFFS[printType];
+async function addQuote(client, widthCm, heightCm, qty, printTariff, isComplete, materialCost, paid = false, finalPrice = null) {
+  const printType = printTariff.code;
+  const tariff = printTariff.rate;
   const surface = (widthCm * heightCm) / 10000;
   const articlePrice = isComplete
     ? materialCost + surface * tariff
@@ -277,6 +345,10 @@ module.exports = {
   adjustPayment,
   getBalance,
   getPLDetails,
-  TARIFFS,
+  getTariffs,
+  setTariffs,
+  getMaterials,
+  saveMaterial,
+  deleteMaterial,
   TYPE_ALIASES,
 };
