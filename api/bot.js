@@ -1,5 +1,6 @@
 const { Telegraf, Markup } = require('telegraf');
 const sheets = require('./sheets');
+const { isFromTelegram } = require('./_webhook');
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
@@ -381,6 +382,9 @@ bot.action('list', async (ctx) => {
 module.exports = async (req, res) => {
   try {
     if (req.method !== 'POST') return res.status(200).send('ok');
+    // Anyone can POST here; only updates carrying the webhook secret really come from Telegram.
+    // Rejected updates are retried by Telegram, so none are lost while the secret is being registered.
+    if (!isFromTelegram(req)) return res.status(401).send('unauthorized');
     await bot.handleUpdate(req.body);
     return res.status(200).send('ok');
   } catch (err) {

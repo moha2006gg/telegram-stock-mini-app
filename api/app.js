@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const { Telegram } = require('telegraf');
 const sheets = require('./sheets');
+const { secureWebhook } = require('./_webhook');
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const OWNER_ID = Number(process.env.OWNER_TELEGRAM_ID);
@@ -149,6 +150,8 @@ const actions = {
   },
 };
 
+let webhookSecured = null;
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST uniquement' });
   const body = req.body || {};
@@ -158,8 +161,19 @@ module.exports = async (req, res) => {
   const action = Object.hasOwn(actions, body.action) ? actions[body.action] : null;
   if (!action) return res.status(400).json({ error: 'Action inconnue' });
 
+  // Once per server start, after the owner is verified: (re)register the bot webhook with its secret,
+  // so the bot keeps working after the secret check went live or the bot token changed.
+  if (!webhookSecured) {
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    webhookSecured = secureWebhook(`https://${host}/api/bot`).catch((err) => {
+      console.error('webhook secret:', err.message);
+      webhookSecured = null;
+    });
+  }
+
   try {
-    return res.status(200).json(await action(body));
+    const [result] = await Promise.all([action(body), webhookSecured]);
+    return res.status(200).json(result);
   } catch (err) {
     console.error(`app ${body.action}:`, err.message);
     return res.status(err.status || 500).json({ error: err.message });
